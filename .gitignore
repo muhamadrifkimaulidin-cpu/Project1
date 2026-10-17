@@ -3,3 +3,13 @@ node_modules/
 .env*.local
 .env
 .vercel/
+
+# dari template with-supabase
+/out/
+/build
+/coverage
+.DS_Store
+*.pem
+npm-debug.log*
+*.tsbuildinfo
+next-env.d.ts
