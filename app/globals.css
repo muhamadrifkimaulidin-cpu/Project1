@@ -420,8 +420,9 @@ input[type="email"] {
 }
 .mono-row .no-lower { text-transform: none; }
 
-.cta-row { padding: 12px 16px; border-bottom: 1px solid var(--line); }
-.cta-row .btn-go { width: 100%; }
+.cta-row { display: flex; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.cta-row .btn-go { flex: 1; }
+.cta-row .btn-line { min-height: 52px; }
 
 /* ========== CATAT ========== */
 .pilihan .card-link { display: block; }
@@ -459,3 +460,30 @@ input[type="email"] {
 .card .err { margin-top: 8px; }
 .card .err:empty { display: none; }
 .card .card-actions .btn-line { flex: 0 0 auto; min-height: 46px; }
+
+/* ========== R&D ========== */
+.filters-1 { grid-template-columns: 1fr; }
+.chips a.chip { display: inline-flex; align-items: center; }
+.chip:disabled { opacity: .4; }
+.status.tahap-ide { background: var(--panel-2); color: var(--ink-2); }
+.status.tahap-diuji, .status.tahap-evaluasi { background: var(--warn-soft); color: var(--warn); }
+.status.tahap-diadopsi { background: var(--green-soft); color: var(--green); }
+.status.tahap-dihentikan { background: var(--danger-soft); color: var(--danger); }
+.rnd-judul { font-family: var(--f-display); font-weight: 800; font-size: 1.5rem; letter-spacing: -.02em; line-height: 1.15; }
+.tahap-bar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.tahap { min-height: 44px; padding: 0 2px; font-size: .72rem; font-weight: 600; border-right: 1px solid var(--line); }
+.tahap:last-child { border-right: 0; }
+.tahap.active { background: var(--ink); color: var(--bg); }
+.tahap.kunci:not(.active) { color: var(--muted); background: var(--panel); }
+.tahap:disabled { cursor: default; }
+.linimasa { list-style: none; }
+.lm { padding: 14px 16px; border-bottom: 1px solid var(--line); box-shadow: inset 3px 0 0 var(--line); display: flex; flex-direction: column; gap: 6px; }
+.lm-keputusan { box-shadow: inset 3px 0 0 var(--green); }
+.lm-batal { opacity: .55; }
+.lm-batal .dtext { text-decoration: line-through; }
+.lm-h { display: flex; align-items: center; gap: 8px; }
+.lm-h .status { margin-left: auto; }
+.lm-kep { font-family: var(--f-display); font-weight: 800; text-transform: capitalize; }
+.lm-foto { max-width: 220px; }
+.btn-batal { align-self: flex-start; min-height: 32px; }
+@media (min-width: 960px) { .lm { padding-left: 20px; padding-right: 20px; } }

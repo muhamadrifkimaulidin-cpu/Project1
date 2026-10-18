@@ -114,6 +114,9 @@ export default function Page() {
           <span>Catat pengeluaran</span>
           <span className="arr">+</span>
         </Link>
+        <Link href="/rnd" className="btn-line">
+          r&amp;d/
+        </Link>
       </div>
       <Suspense fallback={<Memuat />}>
         <Ringkasan />

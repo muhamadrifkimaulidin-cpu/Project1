@@ -8,6 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
+/** Keputusan R&D tidak bernilai uang: sembunyikan jumlah & sumber dana. */
+const bernilai = (item: ItemAntrean) => item.tabel !== "rnd_catatan";
+
 function Rincian({ item }: { item: ItemAntrean }) {
   return (
     <>
@@ -39,9 +42,9 @@ function Rincian({ item }: { item: ItemAntrean }) {
             </a>
           ))}
         </div>
-      ) : (
+      ) : bernilai(item) ? (
         <div className="notice warn bukti-kosong">Belum ada foto bukti.</div>
-      )}
+      ) : null}
     </>
   );
 }
@@ -85,7 +88,7 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
     const ubahNilai = item.setorBarang && nilai !== item.jumlah;
     const teks = ubahNilai
       ? `Setujui dengan nilai disepakati ${rupiah(nilai)} (dicatat ${rupiah(item.jumlah)})?`
-      : `Setujui ${item.judul} ${rupiah(item.jumlah)}?`;
+      : `Setujui ${item.judul}${bernilai(item) ? ` ${rupiah(item.jumlah)}` : ""}?`;
     if (!window.confirm(teks)) return;
     kirim(
       { status: "aktif", ...(item.setorBarang ? { harga_beli: nilai } : {}) },
@@ -104,7 +107,7 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
         <div className="card-h">
           <div className="card-t">
             {item.judul}
-            <small>{rupiah(item.jumlah)}</small>
+            <small>{bernilai(item) ? rupiah(item.jumlah) : "keputusan R&D"}</small>
           </div>
           <span className={`status ${selesai.startsWith("Disetujui") ? "st-approved" : "st-rejected"}`}>
             {selesai.startsWith("Disetujui") ? "aktif" : "batal"}
@@ -121,10 +124,11 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
         <div className="card-t">
           {item.judul}
           <small>
-            {item.pemilikUang ? `uang ${item.pemilikUang}` : "kas usaha"} · dicatat {item.pencatat}
+            {!bernilai(item) ? "keputusan R&D" : item.pemilikUang ? `uang ${item.pemilikUang}` : "kas usaha"} · dicatat{" "}
+            {item.pencatat}
           </small>
         </div>
-        <span className="card-rp">{rupiah(item.jumlah)}</span>
+        {bernilai(item) && <span className="card-rp">{rupiah(item.jumlah)}</span>}
       </div>
 
       <Rincian item={item} />
@@ -199,7 +203,7 @@ export function KartuMenungguLain({ item, penyetuju }: { item: ItemAntrean; peny
             {tanggal(item.tanggal)} · menunggu {penyetuju}
           </small>
         </div>
-        <span className="card-rp">{rupiah(item.jumlah)}</span>
+        {bernilai(item) && <span className="card-rp">{rupiah(item.jumlah)}</span>}
       </div>
       <span className="status st-pending">menunggu</span>
     </article>

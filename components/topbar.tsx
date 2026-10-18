@@ -26,3 +26,13 @@ export function Topbar({ meta }: { meta?: string }) {
     </div>
   );
 }
+
+/** Kerangka topbar tanpa path & jam (fallback Suspense). */
+export function TopbarKerangka() {
+  return (
+    <div className="topbar">
+      <span className="tb-path">3rally/</span>
+      <span className="tb-clock">-- : -- : --</span>
+    </div>
+  );
+}

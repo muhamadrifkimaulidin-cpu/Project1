@@ -1,8 +1,8 @@
-import { BottomNav, NavTabs } from "@/components/navigasi";
+import { BottomNav, BottomNavKerangka, NavTabs, NavTabsKerangka } from "@/components/navigasi";
 import { LogoutButton } from "@/components/logout-button";
 import { BannerOffline } from "@/components/status-sinyal";
 import { TemaToggle } from "@/components/tema-toggle";
-import { Topbar } from "@/components/topbar";
+import { Topbar, TopbarKerangka } from "@/components/topbar";
 import { hitungMenungguSaya } from "@/lib/data";
 import { ambilSesi } from "@/lib/sesi";
 import { Suspense } from "react";
@@ -57,14 +57,14 @@ async function GerbangOwner({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Suspense fallback={<Topbar />}>
+      <Suspense fallback={<TopbarKerangka />}>
         <TopbarPengguna />
       </Suspense>
       <header className="nav">
         <div className="nav-logo">
           3<span className="tick">’</span>rally
         </div>
-        <Suspense fallback={<NavTabs menunggu={0} />}>
+        <Suspense fallback={<NavTabsKerangka />}>
           <NavTabsPengguna />
         </Suspense>
         <TemaToggle varian="cell" />
@@ -79,7 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <GerbangOwner>{children}</GerbangOwner>
         </Suspense>
       </main>
-      <Suspense fallback={<BottomNav menunggu={0} />}>
+      <Suspense fallback={<BottomNavKerangka />}>
         <BottomNavPengguna />
       </Suspense>
     </>

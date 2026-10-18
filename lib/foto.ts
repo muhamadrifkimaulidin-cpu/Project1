@@ -59,7 +59,7 @@ export async function kompresFoto(file: File): Promise<FotoTerkompres> {
  */
 export async function unggahBukti(
   supabase: SupabaseClient,
-  tabel: "transaksi" | "aset" | "kontribusi",
+  tabel: "transaksi" | "aset" | "kontribusi" | "rnd",
   tanggal: string,
   id: string,
   file: File,
