@@ -1,5 +1,5 @@
 import { Mega } from "@/components/judul";
-import { ambilBiayaPraOperasi, ambilPorsi, ambilSaldoKas, hitungMenungguSaya } from "@/lib/data";
+import { ambilBiayaPraOperasi, ambilPorsi, ambilSaldoKas, hitungBelumAdaBukti, hitungMenungguSaya } from "@/lib/data";
 import { TanggalHariIni } from "@/components/tanggal-hari-ini";
 import { rupiah } from "@/lib/format";
 import { ambilSesi } from "@/lib/sesi";
@@ -51,10 +51,11 @@ async function KartuPorsi() {
 
 async function Ringkasan() {
   const { userId } = await ambilSesi();
-  const [saldo, menunggu, praOp] = await Promise.all([
+  const [saldo, menunggu, praOp, tanpaBukti] = await Promise.all([
     ambilSaldoKas(),
     hitungMenungguSaya(userId),
     ambilBiayaPraOperasi(),
+    hitungBelumAdaBukti(),
   ]);
 
   return (
@@ -75,6 +76,11 @@ async function Ringkasan() {
         <span className="slug">biaya-pra-operasi/</span>
         <b>{rupiah(praOp.total)}</b>
         <small className="hint">{praOp.catatan} catatan R&amp;D dan persiapan</small>
+      </div>
+      <div className={`stat${tanpaBukti > 0 ? " perlu" : ""}`}>
+        <span className="slug">belum-ada-bukti/</span>
+        <b>{tanpaBukti}</b>
+        <small className="hint">{tanpaBukti > 0 ? "catatan tanpa foto nota/transfer" : "semua catatan sudah berbukti"}</small>
       </div>
     </div>
   );
@@ -102,6 +108,12 @@ export default function Page() {
         <div className="hi-right">
           <p>Porsi dan kas dihitung hanya dari catatan yang sudah disetujui — sama untuk ketiga owner.</p>
         </div>
+      </div>
+      <div className="cta-row">
+        <Link href="/catat/transaksi" className="btn-go">
+          <span>Catat pengeluaran</span>
+          <span className="arr">+</span>
+        </Link>
       </div>
       <Suspense fallback={<Memuat />}>
         <Ringkasan />
