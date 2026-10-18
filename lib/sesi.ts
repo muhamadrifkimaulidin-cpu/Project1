@@ -1,10 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 export type Profil = { id: string; nama: string; peran: "owner" | "karyawan"; aktif: boolean };
 
-/** Pengguna login + baris profil-nya. Redirect ke login jika sesi habis. */
-export async function ambilSesi(): Promise<{ userId: string; email: string; profil: Profil | null }> {
+/**
+ * Pengguna login + baris profil-nya. Redirect ke login jika sesi habis.
+ * cache(): dipanggil berkali-kali di satu request (topbar, nav, gerbang, halaman) tapi query sekali.
+ */
+export const ambilSesi = cache(async (): Promise<{ userId: string; email: string; profil: Profil | null }> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   const claims = data?.claims;
@@ -17,4 +21,4 @@ export async function ambilSesi(): Promise<{ userId: string; email: string; prof
     .maybeSingle<Profil>();
 
   return { userId: claims.sub, email: String(claims.email ?? ""), profil };
-}
+});
