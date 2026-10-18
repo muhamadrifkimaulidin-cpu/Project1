@@ -51,7 +51,7 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       .eq("status", "menunggu"),
     supabase
       .from("kontribusi")
-      .select("id, tanggal, jumlah, owner_id, keterangan, bukti_path, dicatat_oleh, dibuat_pada")
+      .select("id, tanggal, jumlah, metode, owner_id, keterangan, bukti_path, dicatat_oleh, dibuat_pada")
       .eq("status", "menunggu")
       .eq("bentuk", "setor_uang"),
     supabase
@@ -141,7 +141,10 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       judul: `Setor uang · ${n(r.owner_id)}`,
       pencatat: n(r.dicatat_oleh)!,
       pemilikUang: n(r.owner_id),
-      rincian: [["bentuk", "setor uang ke kas usaha (menambah porsi)"]],
+      rincian: [
+        ["bentuk", "setor uang ke kas usaha (menambah porsi)"],
+        ...(r.metode ? [["metode", r.metode] as [string, string]] : []),
+      ],
       keterangan: r.keterangan,
       foto: foto(["bukti transfer", r.bukti_path]),
       setorBarang: false,

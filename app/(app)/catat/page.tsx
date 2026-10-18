@@ -11,7 +11,7 @@ const PILIHAN = [
     aktif: true,
   },
   { href: "/catat/aset", Ikon: Package, judul: "Aset", ket: "Alat dan perlengkapan: dibeli atau barang pribadi yang disetor.", aktif: false },
-  { href: "/catat/setor", Ikon: Banknote, judul: "Setor uang", ket: "Uang masuk ke kas usaha dari owner.", aktif: false },
+  { href: "/catat/setor", Ikon: Banknote, judul: "Setor uang", ket: "Uang masuk ke kas usaha dari owner — menambah porsi.", aktif: true },
 ];
 
 export default function Page() {
