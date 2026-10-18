@@ -49,10 +49,13 @@ export async function updateSession(request: NextRequest) {
 
   // Semua halaman wajib login, kecuali halaman auth dan berkas PWA (manifest/ikon
   // harus bisa diambil browser sebelum login supaya "Tambahkan ke layar utama" jalan).
+  // /api/notifikasi dipanggil database (bukan browser) dan diamankan kunci rahasianya sendiri.
   const path = request.nextUrl.pathname;
   const publik =
     path.startsWith("/auth") ||
     path === "/manifest.webmanifest" ||
+    path === "/sw.js" ||
+    path === "/api/notifikasi" ||
     path.startsWith("/pwa-icon") ||
     path.startsWith("/apple-icon");
 

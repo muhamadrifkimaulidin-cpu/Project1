@@ -1,6 +1,7 @@
 import { Mega } from "@/components/judul";
 import { ambilBiayaPraOperasi, ambilPorsi, ambilSaldoKas, hitungBelumAdaBukti, hitungMenungguSaya } from "@/lib/data";
 import { TanggalHariIni } from "@/components/tanggal-hari-ini";
+import { TombolNotifikasi } from "@/components/tombol-notifikasi";
 import { rupiah } from "@/lib/format";
 import { ambilSesi } from "@/lib/sesi";
 import Link from "next/link";
@@ -127,6 +128,7 @@ export default function Page() {
       <Suspense fallback={<Memuat />}>
         <KartuPorsi />
       </Suspense>
+      <TombolNotifikasi />
     </>
   );
 }
