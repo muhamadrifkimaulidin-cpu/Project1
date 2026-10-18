@@ -1,17 +1,25 @@
 import { FormTransaksi } from "@/components/form-transaksi";
 import { Mega } from "@/components/judul";
 import { ambilKategori, ambilOutletUtama, ambilOwnerLain } from "@/lib/data";
+import { ambilIdeTerbuka } from "@/lib/rnd";
 import { ambilSesi } from "@/lib/sesi";
 import Link from "next/link";
 import { Suspense } from "react";
 
 async function Isi() {
   const { userId } = await ambilSesi();
-  const [kategori, outlet, penyetuju] = await Promise.all([ambilKategori(), ambilOutletUtama(), ambilOwnerLain(userId)]);
+  const [kategori, outlet, penyetuju, ideTerbuka] = await Promise.all([
+    ambilKategori(),
+    ambilOutletUtama(),
+    ambilOwnerLain(userId),
+    ambilIdeTerbuka(),
+  ]);
   if (!outlet) {
     return <div className="notice bad">Belum ada outlet di database. Jalankan SQL setup outlet di Supabase dulu.</div>;
   }
-  return <FormTransaksi kategori={kategori} outletId={outlet.id} userId={userId} penyetuju={penyetuju} />;
+  return (
+    <FormTransaksi kategori={kategori} outletId={outlet.id} userId={userId} penyetuju={penyetuju} ideTerbuka={ideTerbuka} />
+  );
 }
 
 export default function Page() {

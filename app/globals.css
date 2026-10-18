@@ -487,3 +487,22 @@ input[type="email"] {
 .lm-foto { max-width: 220px; }
 .btn-batal { align-self: flex-start; min-height: 32px; }
 @media (min-width: 960px) { .lm { padding-left: 20px; padding-right: 20px; } }
+
+/* R&D bagian B: resep, uji, skor, bahan */
+.resep { gap: 10px; }
+.resep-baris { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) 40px; gap: 8px; align-items: center; }
+.resep-baris .btn-x { width: 40px; height: 46px; }
+.estimasi { font-family: var(--f-mono); font-size: .8rem; color: var(--ink-2); }
+.estimasi b { font-family: var(--f-display); font-size: 1.3rem; color: var(--ink); letter-spacing: -.02em; }
+.estimasi small { display: block; color: var(--muted); }
+.uji { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.uji-angka { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.uji-angka > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.uji-angka .slug { font-size: .66rem; }
+.uji-angka b { font-family: var(--f-display); font-weight: 800; font-size: 1.1rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.uji-angka b.neg { color: var(--danger); }
+.skor-list { list-style: none; display: flex; flex-direction: column; gap: 2px; font-size: .85rem; }
+.skor-list b { display: inline-block; min-width: 1.4em; font-family: var(--f-mono); color: var(--green); }
+.skor-form { padding-top: 4px; }
+.chip-skor { min-width: 44px; min-height: 44px; font-size: .9rem; }
+.bahan .card-actions { margin-top: 10px; }

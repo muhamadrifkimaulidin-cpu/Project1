@@ -26,11 +26,13 @@ export function FormTransaksi({
   outletId,
   userId,
   penyetuju,
+  ideTerbuka,
 }: {
   kategori: Kategori[];
   outletId: string;
   userId: string;
   penyetuju: string[]; // nama owner lain
+  ideTerbuka: { id: string; judul: string }[]; // ide R&D yang belum diputuskan
 }) {
   const router = useRouter();
   const online = useOnline();
@@ -45,6 +47,7 @@ export function FormTransaksi({
   const [foto, setFoto] = useState<File | null>(null);
   const [uangPribadi, setUangPribadi] = useState(false);
   const [klaim, setKlaim] = useState<Klaim>("modal");
+  const [ideId, setIdeId] = useState("");
 
   const [proses, setProses] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,6 +79,7 @@ export function FormTransaksi({
     setFoto(null);
     setUangPribadi(false);
     setKlaim("modal");
+    setIdeId("");
     setHasil(null);
     setError(null);
     idCatatan.current = null;
@@ -122,6 +126,7 @@ export function FormTransaksi({
           klaim: pribadi ? klaim : null,
           keterangan: keterangan.trim() || null,
           bukti_path: buktiPath,
+          ide_id: jenis === "pengeluaran" && ideId ? ideId : null,
         })
         .select("status")
         .single<{ status: "aktif" | "menunggu" }>();
@@ -252,6 +257,20 @@ export function FormTransaksi({
               ))}
             </div>
           </div>
+          {jenis === "pengeluaran" && ideTerbuka.length > 0 && (
+            <div className="fld">
+              <label htmlFor="ide">Untuk ide R&amp;D (opsional)</label>
+              <select id="ide" value={ideId} onChange={(e) => setIdeId(e.target.value)}>
+                <option value="">— tidak terkait ide —</option>
+                {ideTerbuka.map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {i.judul}
+                  </option>
+                ))}
+              </select>
+              <p className="ref">Biaya ini ikut terhitung di &quot;biaya R&amp;D&quot; ide tersebut. Tidak bisa diubah setelah disimpan.</p>
+            </div>
+          )}
           <div className="fld">
             <label htmlFor="keterangan">Keterangan</label>
             <textarea
