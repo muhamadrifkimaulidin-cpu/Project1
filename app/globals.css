@@ -446,3 +446,16 @@ input[type="email"] {
 .aksi-hasil { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 .aksi-hasil .btn-go { flex: 1; }
 .fs-body > .notice { margin: 0; }
+
+/* ========== SETUJUI ========== */
+.card-rp { flex: 0 0 auto; font-family: var(--f-display); font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.card .kv { margin-bottom: 12px; }
+.bukti-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bukti { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel-2); }
+.bukti img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.bukti .slug { padding: 0 8px 6px; }
+.bukti-kosong { margin: 0; }
+.nilai-sepakat, .tolak-box { margin-top: 12px; }
+.card .err { margin-top: 8px; }
+.card .err:empty { display: none; }
+.card .card-actions .btn-line { flex: 0 0 auto; min-height: 46px; }
