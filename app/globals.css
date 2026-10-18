@@ -531,3 +531,9 @@ input[type="email"] {
 .lap-kv-row dd { font-variant-numeric: tabular-nums; }
 .lap-kv-total { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--line); font-weight: 600; }
 .lap-csv { display: flex; justify-content: flex-end; padding: 12px 16px; }
+
+/* ========== NOTIFIKASI ========== */
+.notif-ket { font-size: .9rem; color: var(--ink-2); }
+.notif-aksi { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.notif-aksi .btn-go { flex: 1; }
+.notif-pesan { margin-top: 10px; }

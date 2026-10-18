@@ -44,3 +44,14 @@ grant all on all tables in schema storage to anon, authenticated;
 alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
 alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
 alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+
+-- Tiruan pg_net & Vault (migrasi 006): http_post hanya mencatat permintaan ke net.log_uji
+create schema net;
+create table net.log_uji (id bigserial primary key, url text, body jsonb, headers jsonb);
+create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}',
+                              headers jsonb default '{}', timeout_milliseconds int default 5000)
+returns bigint language sql as $$
+  insert into net.log_uji (url, body, headers) values (url, body, headers) returning id
+$$;
+create schema vault;
+create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
