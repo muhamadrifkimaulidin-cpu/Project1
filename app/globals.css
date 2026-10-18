@@ -386,3 +386,35 @@ input[type="email"] {
 
 /* Placeholder halaman yang belum dibangun */
 .soon { padding: 18px 16px; }
+
+/* ========== BERANDA ========== */
+.stats { display: grid; grid-template-columns: 1fr; border-bottom: 1px solid var(--line); }
+.stat { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); min-height: 44px; }
+.stat:last-child { border-bottom: 0; }
+.stat b { font-family: var(--f-display); font-weight: 800; font-size: 1.75rem; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat b.neg { color: var(--danger); }
+.stat-link:hover { background: var(--panel); }
+.stat-link.perlu { box-shadow: inset 3px 0 0 var(--warn); background: var(--warn-soft); }
+.stat-link.perlu b { color: var(--warn); }
+
+.porsi-kosong { margin: 0 0 12px; }
+.porsi-list { display: flex; flex-direction: column; gap: 10px; }
+.porsi { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); padding: 12px; }
+.porsi.saya { border-color: var(--green); }
+.porsi-h { display: flex; align-items: baseline; gap: 8px; }
+.porsi-h b { font-family: var(--f-display); font-weight: 800; font-size: 1.2rem; letter-spacing: -.02em; }
+.porsi-pct { margin-left: auto; font-family: var(--f-display); font-weight: 800; font-size: 1.6rem; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.porsi-bar { height: 8px; margin: 10px 0 8px; background: var(--panel-2); border-radius: 4px; overflow: hidden; }
+.porsi-bar span { display: block; height: 100%; background: var(--green); }
+.porsi-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-family: var(--f-mono); font-size: .75rem; color: var(--ink-2); }
+
+@media (min-width: 640px) {
+  .stats { grid-template-columns: repeat(3, 1fr); }
+  .stat { border-bottom: 0; border-right: 1px solid var(--line-soft); }
+  .stat:last-child { border-right: 0; }
+  .porsi-list { display: grid; grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 960px) {
+  .stat { padding: 18px 20px; }
+}
+.mono-row .no-lower { text-transform: none; }

@@ -3,6 +3,7 @@ import { LogoutButton } from "@/components/logout-button";
 import { BannerOffline } from "@/components/status-sinyal";
 import { TemaToggle } from "@/components/tema-toggle";
 import { Topbar } from "@/components/topbar";
+import { hitungMenungguSaya } from "@/lib/data";
 import { ambilSesi } from "@/lib/sesi";
 import { Suspense } from "react";
 
@@ -19,6 +20,21 @@ async function NavPengguna() {
       <small>{profil?.peran ?? "belum terdaftar"}</small>
     </div>
   );
+}
+
+/** Badge "Setujui": jumlah item menunggu yang boleh saya setujui */
+async function jumlahMenunggu() {
+  const { userId, profil } = await ambilSesi();
+  if (profil?.peran !== "owner" || !profil.aktif) return 0;
+  return hitungMenungguSaya(userId);
+}
+
+async function NavTabsPengguna() {
+  return <NavTabs menunggu={await jumlahMenunggu()} />;
+}
+
+async function BottomNavPengguna() {
+  return <BottomNav menunggu={await jumlahMenunggu()} />;
 }
 
 /** Hanya owner aktif yang boleh masuk ke halaman aplikasi (karyawan: Tahap 2). */
@@ -48,7 +64,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="nav-logo">
           3<span className="tick">’</span>rally
         </div>
-        <NavTabs menunggu={0} />
+        <Suspense fallback={<NavTabs menunggu={0} />}>
+          <NavTabsPengguna />
+        </Suspense>
         <TemaToggle varian="cell" />
         <Suspense>
           <NavPengguna />
@@ -61,7 +79,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <GerbangOwner>{children}</GerbangOwner>
         </Suspense>
       </main>
-      <BottomNav menunggu={0} />
+      <Suspense fallback={<BottomNav menunggu={0} />}>
+        <BottomNavPengguna />
+      </Suspense>
     </>
   );
 }
