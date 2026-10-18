@@ -42,7 +42,12 @@ async function Antrean() {
       ) : (
         <div className="cards">
           {milikSaya.map((i) => (
-            <KartuMenungguLain key={`${i.tabel}-${i.id}`} item={i} penyetuju={penyetuju(i.pencatat, i.pemilikUang)} />
+            <KartuMenungguLain
+              key={`${i.tabel}-${i.id}`}
+              item={i}
+              // Pengajuan batal: pemilik uang juga boleh memutuskan (hanya pengaju yang tidak)
+              penyetuju={penyetuju(i.pencatat, i.tabel === "pengajuan_batal" ? null : i.pemilikUang)}
+            />
           ))}
         </div>
       )}

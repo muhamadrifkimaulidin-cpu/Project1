@@ -117,6 +117,9 @@ export default function Page() {
         <Link href="/rnd" className="btn-line">
           r&amp;d/
         </Link>
+        <Link href="/riwayat" className="btn-line">
+          riwayat/
+        </Link>
       </div>
       <Suspense fallback={<Memuat />}>
         <Ringkasan />
