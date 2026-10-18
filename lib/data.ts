@@ -81,3 +81,52 @@ export const hitungMenungguSaya = cache(async (userId: string): Promise<number> 
   ]);
   return jumlah.reduce((a, b) => a + b, 0);
 });
+
+export type KategoriBaris = { id: string; nama: string; jenis: "pemasukan" | "pengeluaran"; fase: "pra_operasi" | "operasi" };
+
+export async function ambilKategori(): Promise<KategoriBaris[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("kategori").select("id, nama, jenis, fase").order("nama");
+  if (error) throw error;
+  return data ?? [];
+}
+
+/** Tahap 1 hanya satu outlet; ambil yang pertama. */
+export async function ambilOutletUtama(): Promise<{ id: string; nama: string } | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("outlet").select("id, nama").order("nama").limit(1).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Nama owner aktif selain saya (calon penyetuju). */
+export async function ambilOwnerLain(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profil")
+    .select("nama")
+    .eq("peran", "owner")
+    .eq("aktif", true)
+    .neq("id", userId)
+    .order("nama");
+  if (error) throw error;
+  return (data ?? []).map((p) => p.nama);
+}
+
+/**
+ * Catatan yang belum punya foto bukti (aturan bisnis #5): pengeluaran, aset, dan setor uang
+ * yang tidak dibatalkan. Kontribusi otomatis ikut transaksi/aset-nya, jadi tidak dihitung dua kali.
+ */
+export async function hitungBelumAdaBukti(): Promise<number> {
+  const supabase = await createClient();
+  const opsi = { count: "exact" as const, head: true };
+  const hasil = await Promise.all([
+    supabase.from("transaksi").select("id", opsi).eq("jenis", "pengeluaran").is("bukti_path", null).neq("status", "batal"),
+    supabase.from("aset").select("id", opsi).is("bukti_path", null).neq("status", "batal"),
+    supabase.from("kontribusi").select("id", opsi).eq("bentuk", "setor_uang").is("bukti_path", null).neq("status", "batal"),
+  ]);
+  return hasil.reduce((a, { count, error }) => {
+    if (error) throw error;
+    return a + (count ?? 0);
+  }, 0);
+}
