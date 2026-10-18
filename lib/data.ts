@@ -132,8 +132,9 @@ export async function hitungBelumAdaBukti(): Promise<number> {
   const hasil = await Promise.all([
     supabase.from("transaksi").select("id", opsi).eq("jenis", "pengeluaran").is("bukti_path", null).neq("status", "batal"),
     // barang setoran tidak punya nota: foto barangnya dihitung sebagai bukti
+    // aset tertaut transaksi: buktinya sudah dihitung di transaksinya (jangan dobel)
     supabase.from("aset").select("id", opsi).is("bukti_path", null).neq("status", "batal")
-      .or("sumber.neq.setor_barang,foto_path.is.null"),
+      .is("transaksi_id", null).or("sumber.neq.setor_barang,foto_path.is.null"),
     supabase.from("kontribusi").select("id", opsi).eq("bentuk", "setor_uang").is("bukti_path", null).neq("status", "batal"),
   ]);
   return hasil.reduce((a, { count, error }) => {

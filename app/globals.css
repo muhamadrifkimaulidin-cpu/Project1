@@ -516,3 +516,18 @@ input[type="email"] {
 .card .ajuan-batal { margin: 12px 0 0; }
 @media (min-width: 640px) { .filter-pilih { grid-template-columns: 1fr 1fr; } }
 .card .ikut-trx { margin-top: 12px; }
+
+/* ========== LAPORAN ========== */
+.lap { scroll-margin-top: calc(var(--top-h) + var(--nav-h)); }
+.lap-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line-soft); }
+.lap-l { min-width: 0; font-size: .92rem; word-break: break-word; }
+.lap-l small { display: block; margin-top: 3px; font-family: var(--f-mono); font-size: .68rem; color: var(--muted); }
+.lap-r { flex: 0 0 auto; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lap-total { background: var(--panel); font-weight: 700; }
+.lap-owner { border-bottom: 1px solid var(--line-soft); }
+.lap-owner .lap-row { border-bottom: 0; padding-bottom: 4px; }
+.lap-kv { display: block; padding: 0 16px 12px; }
+.lap-kv-row { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.lap-kv-row dd { font-variant-numeric: tabular-nums; }
+.lap-kv-total { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--line); font-weight: 600; }
+.lap-csv { display: flex; justify-content: flex-end; padding: 12px 16px; }
