@@ -515,3 +515,4 @@ input[type="email"] {
 .card-batal .card-rp { text-decoration: line-through; }
 .card .ajuan-batal { margin: 12px 0 0; }
 @media (min-width: 640px) { .filter-pilih { grid-template-columns: 1fr 1fr; } }
+.card .ikut-trx { margin-top: 12px; }

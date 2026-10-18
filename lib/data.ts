@@ -66,8 +66,9 @@ export const hitungMenungguSaya = cache(async (userId: string): Promise<number> 
         .eq("status", "menunggu").neq("dicatat_oleh", userId).or(bukanUangSaya),
     ),
     hitung(
+      // aset yang ditautkan ke transaksi disetujui lewat transaksinya (migrasi 005)
       supabase.from("aset").select("id", opsi)
-        .eq("status", "menunggu").neq("dicatat_oleh", userId).or(bukanUangSaya),
+        .eq("status", "menunggu").is("transaksi_id", null).neq("dicatat_oleh", userId).or(bukanUangSaya),
     ),
     hitung(
       supabase.from("kontribusi").select("id", opsi)
@@ -130,7 +131,9 @@ export async function hitungBelumAdaBukti(): Promise<number> {
   const opsi = { count: "exact" as const, head: true };
   const hasil = await Promise.all([
     supabase.from("transaksi").select("id", opsi).eq("jenis", "pengeluaran").is("bukti_path", null).neq("status", "batal"),
-    supabase.from("aset").select("id", opsi).is("bukti_path", null).neq("status", "batal"),
+    // barang setoran tidak punya nota: foto barangnya dihitung sebagai bukti
+    supabase.from("aset").select("id", opsi).is("bukti_path", null).neq("status", "batal")
+      .or("sumber.neq.setor_barang,foto_path.is.null"),
     supabase.from("kontribusi").select("id", opsi).eq("bentuk", "setor_uang").is("bukti_path", null).neq("status", "batal"),
   ]);
   return hasil.reduce((a, { count, error }) => {

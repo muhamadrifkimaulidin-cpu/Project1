@@ -1,4 +1,4 @@
-import { ambilCatatan, type TabelCatatan } from "@/lib/riwayat";
+import { ambilCatatan, namaAsetTertaut, type TabelCatatan } from "@/lib/riwayat";
 import { createClient } from "@/lib/supabase/server";
 import { tanggal as fmtTanggal } from "@/lib/format";
 
@@ -46,12 +46,13 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
     supabase.from("profil").select("id, nama"),
     supabase
       .from("transaksi")
-      .select("id, tanggal, jenis, jumlah, metode, sumber_dana, dibayar_owner_id, klaim, keterangan, bukti_path, dicatat_oleh, dibuat_pada, kategori(nama)")
+      .select("id, tanggal, jenis, jumlah, metode, sumber_dana, dibayar_owner_id, klaim, keterangan, bukti_path, dicatat_oleh, dibuat_pada, kategori(nama), aset(nama)")
       .eq("status", "menunggu"),
     supabase
       .from("aset")
       .select("id, nama, tanggal_beli, harga_beli, umur_bulan, sumber, dibayar_owner_id, lokasi, foto_path, bukti_path, dicatat_oleh, dibuat_pada")
-      .eq("status", "menunggu"),
+      .eq("status", "menunggu")
+      .is("transaksi_id", null), // aset yang ditautkan ke transaksi ikut keputusan transaksinya
     supabase
       .from("kontribusi")
       .select("id, tanggal, jumlah, metode, owner_id, keterangan, bukti_path, dicatat_oleh, dibuat_pada")
@@ -98,6 +99,7 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
 
   for (const r of trx.data!) {
     const kat = (r.kategori as unknown as { nama: string } | null)?.nama ?? "?";
+    const asetTertaut = namaAsetTertaut(r.aset);
     items.push({
       tabel: "transaksi",
       id: r.id,
@@ -114,6 +116,7 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
             ? `uang pribadi ${n(r.dibayar_owner_id)} · ${r.klaim === "modal" ? "modal (menambah porsi)" : "talangan (utang usaha)"}`
             : "kas usaha",
         ],
+        ...(asetTertaut ? [["aset", `${asetTertaut} (ikut disetujui/ditolak bersama)`] as [string, string]] : []),
       ],
       keterangan: r.keterangan,
       foto: foto(["nota", r.bukti_path]),

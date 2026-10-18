@@ -30,11 +30,18 @@ export type ItemRiwayat = {
   alasanBatal: string | null;
   foto: { label: string; url: string }[];
   adaBukti: boolean;
+  ikutTransaksi: boolean; // aset yang mengikuti status transaksi "Pembelian aset"-nya (migrasi 005)
   pengajuan: PengajuanTerbuka | null;
   dibuatPada: string;
 };
 
 export const BATAS_PER_JENIS = 100;
+
+/** Nama aset yang menautkan transaksi (embed aset(nama): array karena relasi satu-ke-banyak di PostgREST). */
+export function namaAsetTertaut(x: unknown): string | null {
+  const a = (Array.isArray(x) ? x[0] : x) as { nama: string } | undefined | null;
+  return a?.nama ?? null;
+}
 const BERLAKU_URL_DETIK = 60 * 60; // signed URL berlaku 1 jam (CLAUDE.md §6.9)
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -85,7 +92,7 @@ export async function ambilCatatan(opsi: {
   const qTrx = () => {
     let q = supabase
       .from("transaksi")
-      .select("id, tanggal, jenis, jumlah, metode, sumber_dana, dibayar_owner_id, klaim, keterangan, bukti_path, status, dicatat_oleh, disetujui_oleh, alasan_batal, dibuat_pada, kategori(nama), rnd_ide(judul)");
+      .select("id, tanggal, jenis, jumlah, metode, sumber_dana, dibayar_owner_id, klaim, keterangan, bukti_path, status, dicatat_oleh, disetujui_oleh, alasan_batal, dibuat_pada, kategori(nama), rnd_ide(judul), aset(nama)");
     if (ids) return q.in("id", ids.transaksi ?? []);
     if (f.status) q = q.eq("status", f.status);
     if (f.owner) q = q.or(milik("dibayar_owner_id"));
@@ -95,7 +102,7 @@ export async function ambilCatatan(opsi: {
   const qAset = () => {
     let q = supabase
       .from("aset")
-      .select("id, nama, tanggal_beli, harga_beli, umur_bulan, sumber, dibayar_owner_id, lokasi, foto_path, bukti_path, status, dicatat_oleh, disetujui_oleh, alasan_batal, dibuat_pada");
+      .select("id, nama, tanggal_beli, harga_beli, umur_bulan, sumber, dibayar_owner_id, lokasi, foto_path, bukti_path, transaksi_id, status, dicatat_oleh, disetujui_oleh, alasan_batal, dibuat_pada");
     if (ids) return q.in("id", ids.aset ?? []);
     if (f.status) q = q.eq("status", f.status);
     if (f.owner) q = q.or(milik("dibayar_owner_id"));
@@ -160,6 +167,7 @@ export async function ambilCatatan(opsi: {
   for (const r of trx.data!) {
     const kat = (r.kategori as unknown as { nama: string } | null)?.nama ?? "?";
     const ide = (r.rnd_ide as unknown as { judul: string } | null)?.judul;
+    const asetTertaut = namaAsetTertaut(r.aset);
     items.push({
       ...umum("transaksi", r),
       tanggal: r.tanggal,
@@ -174,12 +182,14 @@ export async function ambilCatatan(opsi: {
             : "kas usaha",
         ],
         ...(ide ? [["ide R&D", ide] as [string, string]] : []),
+        ...(asetTertaut ? [["aset", asetTertaut] as [string, string]] : []),
       ],
       keterangan: r.keterangan,
       pemilikId: r.dibayar_owner_id,
       pemilik: n(r.dibayar_owner_id),
       foto: foto(["nota", r.bukti_path]),
       adaBukti: !!r.bukti_path,
+      ikutTransaksi: false,
     });
   }
 
@@ -193,12 +203,15 @@ export async function ambilCatatan(opsi: {
         ["asal", `${LABEL_SUMBER_ASET[r.sumber] ?? r.sumber}${r.dibayar_owner_id ? ` (${n(r.dibayar_owner_id)})` : ""}`],
         ["umur", `${r.umur_bulan} bulan`],
         ...(r.lokasi ? [["lokasi", r.lokasi] as [string, string]] : []),
+        ...(r.transaksi_id ? [["kas", "ikut pengeluaran \"Pembelian aset\"-nya"] as [string, string]] : []),
       ],
       keterangan: null,
       pemilikId: r.dibayar_owner_id,
       pemilik: n(r.dibayar_owner_id),
       foto: foto(["barang", r.foto_path], ["nota", r.bukti_path]),
-      adaBukti: !!r.bukti_path,
+      // barang setoran tidak punya nota: foto barangnya dihitung sebagai bukti
+      adaBukti: !!r.bukti_path || (r.sumber === "setor_barang" && !!r.foto_path),
+      ikutTransaksi: !!r.transaksi_id,
     });
   }
 
@@ -217,6 +230,7 @@ export async function ambilCatatan(opsi: {
       pemilik: n(r.owner_id),
       foto: foto(["bukti transfer", r.bukti_path]),
       adaBukti: !!r.bukti_path,
+      ikutTransaksi: false,
     });
   }
 
