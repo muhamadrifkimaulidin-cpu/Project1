@@ -37,6 +37,15 @@ export function AksiRiwayat({ item, userId }: { item: ItemRiwayat; userId: strin
     );
   }
 
+  if (item.ikutTransaksi && item.status !== "batal") {
+    return (
+      <p className="ref ikut-trx">
+        Disetujui/dibatalkan bersama pengeluaran &quot;Pembelian aset&quot;-nya — {item.status === "aktif" ? "ajukan batal" : "tarik/setujui"} di
+        kartu transaksinya.
+      </p>
+    );
+  }
+
   const tarik = item.status === "menunggu" && item.pencatatId === userId;
   const ajukan = item.status === "aktif";
   if (!tarik && !ajukan) return null;
