@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /**
  * Kompresi foto di klien sebelum upload (CLAUDE.md §6.9):
  * sisi terpanjang 1600 px, WebP quality 0.7, fallback JPEG bila browser tidak bisa encode WebP.
@@ -48,4 +50,26 @@ export async function kompresFoto(file: File): Promise<FotoTerkompres> {
   } finally {
     tutup();
   }
+}
+
+/**
+ * Kompres lalu unggah foto bukti ke bucket private `bukti`: {tabel}/{yyyy-mm}/{id}.{webp|jpg}.
+ * id = id catatan, jadi file mudah ditelusuri saat audit. "already exists" dianggap sukses
+ * (foto sudah terunggah di percobaan sebelumnya dengan id yang sama).
+ */
+export async function unggahBukti(
+  supabase: SupabaseClient,
+  tabel: "transaksi" | "aset" | "kontribusi",
+  tanggal: string,
+  id: string,
+  file: File,
+  onTahap?: (t: string) => void,
+): Promise<string> {
+  onTahap?.("Mengompres foto…");
+  const f = await kompresFoto(file);
+  const path = `${tabel}/${tanggal.slice(0, 7)}/${id}.${f.ext}`;
+  onTahap?.("Mengunggah foto…");
+  const { error } = await supabase.storage.from("bukti").upload(path, f.blob, { contentType: f.contentType, upsert: false });
+  if (error && !/exists/i.test(error.message)) throw new Error(`Upload foto gagal: ${error.message}`);
+  return path;
 }

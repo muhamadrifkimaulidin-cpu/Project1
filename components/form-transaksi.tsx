@@ -3,8 +3,8 @@
 import { InputUang } from "@/components/input-uang";
 import { PilihFoto } from "@/components/pilih-foto";
 import { useOnline } from "@/components/status-sinyal";
-import { kompresFoto } from "@/lib/foto";
-import { rupiah, tanggal as fmtTanggal } from "@/lib/format";
+import { unggahBukti } from "@/lib/foto";
+import { hariIniLokal, rupiah, tanggal as fmtTanggal } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,11 +18,6 @@ type Klaim = "modal" | "talangan";
 
 // Nilai yang disepakati di CLAUDE.md §4.2: pengeluaran kas di atas ini butuh persetujuan
 const BATAS_SETUJU_KAS = 500_000;
-
-function hariIniLokal() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
 
 type Hasil = { status: "aktif" | "menunggu"; jumlah: number; jenis: Jenis; tanpaBukti: boolean };
 
@@ -109,17 +104,7 @@ export function FormTransaksi({
     let buktiPath: string | null = null;
 
     try {
-      if (foto) {
-        setProses("Mengompres foto…");
-        const f = await kompresFoto(foto);
-        buktiPath = `transaksi/${tgl.slice(0, 7)}/${id}.${f.ext}`;
-        setProses("Mengunggah foto…");
-        const up = await supabase.storage
-          .from("bukti")
-          .upload(buktiPath, f.blob, { contentType: f.contentType, upsert: false });
-        // "already exists" = foto ini sudah terunggah di percobaan sebelumnya
-        if (up.error && !/exists/i.test(up.error.message)) throw new Error(`Upload foto gagal: ${up.error.message}`);
-      }
+      if (foto) buktiPath = await unggahBukti(supabase, "transaksi", tgl, id, foto, setProses);
 
       setProses("Menyimpan…");
       const { data, error: err } = await supabase

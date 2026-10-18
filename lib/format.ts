@@ -14,3 +14,9 @@ export function tanggal(d: Date | string): string {
     : new Date(d);
   return `${dt.getDate()} ${BULAN[dt.getMonth()]} ${dt.getFullYear()}`;
 }
+
+/** 'YYYY-MM-DD' hari ini menurut jam perangkat (WIB di HP), bukan UTC. Panggil hanya di browser. */
+export function hariIniLokal(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}

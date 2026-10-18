@@ -1,5 +1,6 @@
 -- =====================================================================
--- Uji migrasi 001. Aman dijalankan di SQL Editor Supabase:
+-- Uji migrasi 001 (diperbarui untuk migrasi 002: setor uang kini wajib metode).
+-- Aman dijalankan di SQL Editor Supabase:
 -- semua data uji dibuat dalam satu transaksi lalu DIBATALKAN (rollback).
 --
 -- Cara baca hasil: skrip SELALU berakhir dengan pesan "ERROR" berisi ringkasan.
@@ -118,8 +119,8 @@ begin
 
   -- 2. Pemalsuan saat insert
   perform pg_temp.uji('09 A insert setor_uang status=aktif, dicatat_oleh=B -> dipaksa menunggu, dicatat A', A, format(
-    $q$insert into kontribusi (id, owner_id, bentuk, jumlah, status, dicatat_oleh, disetujui_oleh)
-       values (%L, %L, 'setor_uang', 1000000, 'aktif', %L, %L)$q$, k_setor, A, B, C),
+    $q$insert into kontribusi (id, owner_id, bentuk, jumlah, metode, status, dicatat_oleh, disetujui_oleh)
+       values (%L, %L, 'setor_uang', 1000000, 'transfer', 'aktif', %L, %L)$q$, k_setor, A, B, C),
     false, format($c$(select status = 'menunggu' and dicatat_oleh = %L and disetujui_oleh is null
                  from kontribusi where id = %L)$c$, A, k_setor));
 
