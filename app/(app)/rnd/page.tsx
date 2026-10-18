@@ -70,6 +70,9 @@ export default function Page({ searchParams }: { searchParams: Promise<{ jalur?:
           <span>Ide baru</span>
           <span className="arr">+</span>
         </Link>
+        <Link href="/rnd/bahan" className="btn-line">
+          bahan/
+        </Link>
       </div>
       <Suspense fallback={<div className="loading-row"><div className="spin dark" /></div>}>
         <Daftar searchParams={searchParams} />

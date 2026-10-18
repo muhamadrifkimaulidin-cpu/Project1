@@ -1,8 +1,8 @@
 import { Mega } from "@/components/judul";
-import { BatalCatatan, FormCatatanRnd, PilihTahap } from "@/components/rnd-aksi";
+import { BatalCatatan, FormCatatanRnd, FormSkor, PilihTahap } from "@/components/rnd-aksi";
 import { ambilOwnerLain } from "@/lib/data";
 import { rupiah, tanggal } from "@/lib/format";
-import { ambilIde, labelSubjenis } from "@/lib/rnd";
+import { ambilBahan, ambilIde, ambilUjiIde, labelSubjenis, type HasilUji } from "@/lib/rnd";
 import { ambilSesi } from "@/lib/sesi";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -10,12 +10,49 @@ import { Suspense } from "react";
 
 const LABEL_JENIS = { progres: "progres", uji: "uji", keputusan: "keputusan" } as const;
 
+function KartuUji({ h }: { h: HasilUji }) {
+  const naik = h.biayaPerCup !== null && h.biayaPerCupKini !== null ? h.biayaPerCupKini - h.biayaPerCup : 0;
+  return (
+    <div className="uji">
+      <div className="uji-angka">
+        <div>
+          <span className="slug">biaya/cup saat uji</span>
+          <b>{h.biayaPerCup === null ? "—" : rupiah(h.biayaPerCup)}</b>
+        </div>
+        <div>
+          <span className="slug">dengan harga kini</span>
+          <b className={naik > 0 ? "neg" : undefined}>{h.biayaPerCupKini === null ? "—" : rupiah(h.biayaPerCupKini)}</b>
+        </div>
+        <div>
+          <span className="slug">skor</span>
+          <b>{h.skorRata === null ? "—" : h.skorRata.toLocaleString("id-ID", { maximumFractionDigits: 2 })}</b>
+          <small className="hint">{h.skor.length} penilai</small>
+        </div>
+      </div>
+      <p className="hint">
+        {h.jumlahCup} cup · batch {rupiah(h.biayaBatch)} ·{" "}
+        {h.resep.map((r) => `${r.bahan} ${r.takaran.toLocaleString("id-ID")} ${r.satuan}`).join(", ")}
+      </p>
+      {h.skor.length > 0 && (
+        <ul className="skor-list">
+          {h.skor.map((s, i) => (
+            <li key={i}>
+              <b>{s.skor}</b> {s.penilai}
+              {s.komentar && <span className="hint"> — {s.komentar}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 async function Detail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const [{ userId }, data] = await Promise.all([ambilSesi(), ambilIde(id)]);
   if (!data) notFound();
-  const penyetuju = await ambilOwnerLain(userId);
+  const [penyetuju, bahan, uji] = await Promise.all([ambilOwnerLain(userId), ambilBahan(), ambilUjiIde(id)]);
   const { ide, catatan } = data;
   const final = ide.tahap === "diadopsi" || ide.tahap === "dihentikan";
 
@@ -45,7 +82,13 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
         </div>
       </section>
 
-      <FormCatatanRnd ideId={ide.id} final={final} adaKeputusanMenunggu={ide.keputusan_menunggu} penyetuju={penyetuju} />
+      <FormCatatanRnd
+        ideId={ide.id}
+        final={final}
+        adaKeputusanMenunggu={ide.keputusan_menunggu}
+        penyetuju={penyetuju}
+        bahan={bahan.filter((b) => b.aktif).map(({ id, nama, satuan, harga_per_satuan }) => ({ id, nama, satuan, harga_per_satuan }))}
+      />
 
       <section className="fs">
         <div className="fs-head">
@@ -67,6 +110,8 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                 </span>
               </div>
               <p className="dtext">{c.isi}</p>
+              {c.jenis === "uji" && uji.get(c.id) && <KartuUji h={uji.get(c.id)!} />}
+              {c.jenis === "uji" && c.status === "aktif" && <FormSkor catatanId={c.id} />}
               {c.lampiranUrl && (
                 <a href={c.lampiranUrl} target="_blank" rel="noreferrer" className="bukti lm-foto">
                   {/* eslint-disable-next-line @next/next/no-img-element -- signed URL storage */}
