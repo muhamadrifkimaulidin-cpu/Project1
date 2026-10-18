@@ -10,6 +10,9 @@ import { Fragment, useState } from "react";
 
 /** Keputusan R&D tidak bernilai uang: sembunyikan jumlah & sumber dana. */
 const bernilai = (item: ItemAntrean) => item.tabel !== "rnd_catatan";
+/** Pengajuan batal punya status sendiri (disetujui/ditolak); catatan biasa aktif/batal. */
+const pengajuan = (item: ItemAntrean) => item.tabel === "pengajuan_batal";
+const labelPencatat = (item: ItemAntrean) => (pengajuan(item) ? "diajukan" : "dicatat");
 
 function Rincian({ item }: { item: ItemAntrean }) {
   return (
@@ -17,7 +20,7 @@ function Rincian({ item }: { item: ItemAntrean }) {
       <dl className="kv">
         <dt>tanggal</dt>
         <dd>{tanggal(item.tanggal)}</dd>
-        <dt>dicatat</dt>
+        <dt>{labelPencatat(item)}</dt>
         <dd>{item.pencatat}</dd>
         {item.rincian.map(([k, v]) => (
           <Fragment key={k}>
@@ -86,10 +89,13 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
   const setujui = () => {
     if (item.setorBarang && (!nilai || nilai <= 0)) return setError("Isi nilai yang disepakati.");
     const ubahNilai = item.setorBarang && nilai !== item.jumlah;
-    const teks = ubahNilai
-      ? `Setujui dengan nilai disepakati ${rupiah(nilai)} (dicatat ${rupiah(item.jumlah)})?`
-      : `Setujui ${item.judul}${bernilai(item) ? ` ${rupiah(item.jumlah)}` : ""}?`;
+    const teks = pengajuan(item)
+      ? `Setujui pembatalan ${item.judul.replace(/^Batalkan · /, "")} ${rupiah(item.jumlah)}? Catatan jadi batal dan tidak dihitung lagi ke kas/porsi.`
+      : ubahNilai
+        ? `Setujui dengan nilai disepakati ${rupiah(nilai)} (dicatat ${rupiah(item.jumlah)})?`
+        : `Setujui ${item.judul}${bernilai(item) ? ` ${rupiah(item.jumlah)}` : ""}?`;
     if (!window.confirm(teks)) return;
+    if (pengajuan(item)) return kirim({ status: "disetujui" }, "Disetujui — catatan sudah dibatalkan.");
     kirim(
       { status: "aktif", ...(item.setorBarang ? { harga_beli: nilai } : {}) },
       `Disetujui${ubahNilai ? ` dengan nilai ${rupiah(nilai)}` : ""}.`,
@@ -98,6 +104,8 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
 
   const tolak = () => {
     if (!alasan.trim()) return setError("Alasan penolakan wajib diisi.");
+    if (pengajuan(item))
+      return kirim({ status: "ditolak", alasan_tolak: alasan.trim() }, "Ditolak — pengajuan ditolak, catatan tetap aktif.");
     kirim({ status: "batal", alasan_batal: alasan.trim() }, "Ditolak — catatan dibatalkan dengan alasan tercatat.");
   };
 
@@ -110,7 +118,9 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
             <small>{bernilai(item) ? rupiah(item.jumlah) : "keputusan R&D"}</small>
           </div>
           <span className={`status ${selesai.startsWith("Disetujui") ? "st-approved" : "st-rejected"}`}>
-            {selesai.startsWith("Disetujui") ? "aktif" : "batal"}
+            {pengajuan(item)
+              ? selesai.startsWith("Disetujui") ? "dibatalkan" : "tetap aktif"
+              : selesai.startsWith("Disetujui") ? "aktif" : "batal"}
           </span>
         </div>
         <p className="hint">{selesai}</p>
@@ -124,8 +134,8 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
         <div className="card-t">
           {item.judul}
           <small>
-            {!bernilai(item) ? "keputusan R&D" : item.pemilikUang ? `uang ${item.pemilikUang}` : "kas usaha"} · dicatat{" "}
-            {item.pencatat}
+            {!bernilai(item) ? "keputusan R&D" : item.pemilikUang ? `uang ${item.pemilikUang}` : "kas usaha"} ·{" "}
+            {labelPencatat(item)} {item.pencatat}
           </small>
         </div>
         {bernilai(item) && <span className="card-rp">{rupiah(item.jumlah)}</span>}
@@ -148,7 +158,11 @@ export function KartuSetujui({ item }: { item: ItemAntrean }) {
             id={`alasan-${item.id}`}
             value={alasan}
             onChange={(e) => setAlasan(e.target.value)}
-            placeholder="mis. nota tidak terbaca / jumlah tidak sesuai nota"
+            placeholder={
+              pengajuan(item)
+                ? "mis. catatan ini benar, nota ada di foto"
+                : "mis. nota tidak terbaca / jumlah tidak sesuai nota"
+            }
           />
         </div>
       )}

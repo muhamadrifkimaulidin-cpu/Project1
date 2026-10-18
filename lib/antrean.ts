@@ -1,6 +1,8 @@
+import { ambilCatatan, type TabelCatatan } from "@/lib/riwayat";
 import { createClient } from "@/lib/supabase/server";
+import { tanggal as fmtTanggal } from "@/lib/format";
 
-export type Tabel = "transaksi" | "aset" | "kontribusi" | "distribusi" | "rnd_catatan";
+export type Tabel = "transaksi" | "aset" | "kontribusi" | "distribusi" | "rnd_catatan" | "pengajuan_batal";
 
 export type ItemAntrean = {
   tabel: Tabel;
@@ -35,11 +37,12 @@ const LABEL_DISTRIBUSI: Record<string, string> = {
  * - bolehSaya: boleh saya setujui (bukan catatan saya, bukan uang saya) — sama dengan policy owner_setujui_*
  * - milikSaya: catatan/uang saya yang menunggu owner lain
  * Kontribusi otomatis (dari transaksi/aset) tidak ditampilkan terpisah: disetujui lewat sumbernya.
+ * Pengajuan batal: boleh diputuskan owner mana pun selain pengaju (policy owner_putuskan_batal).
  */
 export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAntrean[]; milikSaya: ItemAntrean[] }> {
   const supabase = await createClient();
 
-  const [profil, trx, aset, kontribusi, distribusi, rnd] = await Promise.all([
+  const [profil, trx, aset, kontribusi, distribusi, rnd, ajuan] = await Promise.all([
     supabase.from("profil").select("id, nama"),
     supabase
       .from("transaksi")
@@ -63,8 +66,12 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       .select("id, tanggal, isi, keputusan, lampiran_path, dicatat_oleh, dibuat_pada, rnd_ide(judul, jalur, subjenis)")
       .eq("status", "menunggu")
       .eq("jenis", "keputusan"),
+    supabase
+      .from("pengajuan_batal")
+      .select("id, tabel, baris_id, alasan, diajukan_oleh, dibuat_pada")
+      .eq("status", "menunggu"),
   ]);
-  for (const r of [profil, trx, aset, kontribusi, distribusi, rnd]) if (r.error) throw r.error;
+  for (const r of [profil, trx, aset, kontribusi, distribusi, rnd, ajuan]) if (r.error) throw r.error;
 
   const nama = new Map((profil.data ?? []).map((p) => [p.id, p.nama as string]));
   const n = (id: string | null) => (id ? nama.get(id) ?? "?" : null);
@@ -194,6 +201,37 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       dibuatPada: r.dibuat_pada,
       milik: r.dicatat_oleh === userId,
     });
+  }
+
+  // Pengajuan batal: tampilkan catatan yang mau dibatalkan beserta buktinya
+  if (ajuan.data!.length) {
+    const ids: Partial<Record<TabelCatatan, string[]>> = {};
+    for (const p of ajuan.data!) if (p.tabel !== "distribusi") (ids[p.tabel as TabelCatatan] ??= []).push(p.baris_id);
+    const { items: target } = await ambilCatatan({ ids });
+    const peta = new Map(target.map((t) => [`${t.tabel}:${t.id}`, t]));
+    for (const p of ajuan.data!) {
+      const t = peta.get(`${p.tabel}:${p.baris_id}`);
+      if (!t) continue;
+      items.push({
+        tabel: "pengajuan_batal",
+        id: p.id,
+        tanggal: t.tanggal,
+        jumlah: t.jumlah,
+        judul: `Batalkan · ${t.judul}`,
+        pencatat: n(p.diajukan_oleh)!,
+        pemilikUang: t.pemilik,
+        rincian: [
+          ["alasan batal", p.alasan],
+          ["catatan asli", `${fmtTanggal(t.tanggal)} · dicatat ${t.pencatat}${t.penyetuju ? ` · disetujui ${t.penyetuju}` : ""}`],
+          ...t.rincian,
+        ],
+        keterangan: t.keterangan,
+        foto: t.foto,
+        setorBarang: false,
+        dibuatPada: p.dibuat_pada,
+        milik: p.diajukan_oleh === userId,
+      });
+    }
   }
 
   // Yang paling lama menunggu di atas

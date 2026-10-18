@@ -1,5 +1,5 @@
 -- =====================================================================
--- Uji migrasi 001 (diperbarui untuk migrasi 002: setor uang kini wajib metode).
+-- Uji migrasi 001 (diperbarui untuk migrasi 002: setor uang wajib metode; 004: batal lewat pengajuan).
 -- Aman dijalankan di SQL Editor Supabase:
 -- semua data uji dibuat dalam satu transaksi lalu DIBATALKAN (rollback).
 --
@@ -88,9 +88,9 @@ begin
     false, format($c$(select status from transaksi where id = %L) = 'menunggu'
                  and (select status from kontribusi where transaksi_id = %L) = 'menunggu'$c$, t_modal, t_modal));
 
-  perform pg_temp.uji('02 A setujui catatannya sendiri -> tidak berubah', A, format(
+  perform pg_temp.uji('02 A setujui catatannya sendiri -> ditolak/tidak berubah', A, format(
     $q$update transaksi set status = 'aktif' where id = %L$q$, t_modal),
-    false, format($c$(select status from transaksi where id = %L) = 'menunggu'$c$, t_modal));
+    true, format($c$(select status from transaksi where id = %L) = 'menunggu'$c$, t_modal));
 
   perform pg_temp.uji('03 B setujui, coba palsukan disetujui_oleh=C -> tercatat B', B, format(
     $q$update transaksi set status = 'aktif', disetujui_oleh = %L where id = %L$q$, C, t_modal),
@@ -108,8 +108,11 @@ begin
   perform pg_temp.uji('06 C batalkan tanpa alasan (spasi) -> ditolak', C, format(
     $q$update transaksi set status = 'batal', alasan_batal = '   ' where id = %L$q$, t_modal), true);
 
-  perform pg_temp.uji('07 C batalkan dengan alasan -> batal, kontribusi ikut batal', C, format(
-    $q$update transaksi set status = 'batal', alasan_batal = 'nota dobel' where id = %L$q$, t_modal),
+  -- Sejak migrasi 004 catatan aktif dibatalkan lewat pengajuan_batal + persetujuan owner lain
+  perform pg_temp.uji('07 C ajukan batal dengan alasan (migrasi 004)', C, format(
+    $q$insert into pengajuan_batal (tabel, baris_id, alasan) values ('transaksi', %L, 'nota dobel')$q$, t_modal), false);
+  perform pg_temp.uji('07b B setujui pengajuan -> batal, kontribusi ikut batal', B, format(
+    $q$update pengajuan_batal set status = 'disetujui' where baris_id = %L$q$, t_modal),
     false, format($c$(select status from transaksi where id = %L) = 'batal'
                  and (select status from kontribusi where transaksi_id = %L) = 'batal'$c$, t_modal, t_modal));
 
@@ -124,9 +127,9 @@ begin
     false, format($c$(select status = 'menunggu' and dicatat_oleh = %L and disetujui_oleh is null
                  from kontribusi where id = %L)$c$, A, k_setor));
 
-  perform pg_temp.uji('10 A setujui setor_uang miliknya -> tidak berubah', A, format(
+  perform pg_temp.uji('10 A setujui setor_uang miliknya -> ditolak/tidak berubah', A, format(
     $q$update kontribusi set status = 'aktif' where id = %L$q$, k_setor),
-    false, format($c$(select status from kontribusi where id = %L) = 'menunggu'$c$, k_setor));
+    true, format($c$(select status from kontribusi where id = %L) = 'menunggu'$c$, k_setor));
 
   perform pg_temp.uji('11 B ubah jumlah setor_uang sambil menyetujui -> ditolak', B, format(
     $q$update kontribusi set status = 'aktif', jumlah = 5000000 where id = %L$q$, k_setor), true);
