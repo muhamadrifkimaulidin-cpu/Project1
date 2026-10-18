@@ -1,5 +1,5 @@
 import { Mega } from "@/components/judul";
-import { ArrowLeftRight, Banknote, Package } from "lucide-react";
+import { ArrowLeftRight, Banknote, FlaskConical, Package } from "lucide-react";
 import Link from "next/link";
 
 const PILIHAN = [
@@ -8,6 +8,13 @@ const PILIHAN = [
     Ikon: ArrowLeftRight,
     judul: "Pengeluaran / pemasukan",
     ket: "Belanja R&D, bahan, operasional — termasuk yang dibayar pakai uang pribadi.",
+    aktif: true,
+  },
+  {
+    href: "/rnd",
+    Ikon: FlaskConical,
+    judul: "R&D",
+    ket: "Ide produk & sistem (SOP, alat, supplier, alur kas): catat perkembangan sampai diputuskan.",
     aktif: true,
   },
   { href: "/catat/aset", Ikon: Package, judul: "Aset", ket: "Alat dan perlengkapan: dibeli atau barang pribadi yang disetor.", aktif: false },

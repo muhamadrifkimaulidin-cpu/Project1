@@ -50,3 +50,29 @@ export function BottomNav({ menunggu }: { menunggu: number }) {
     </nav>
   );
 }
+
+/** Kerangka tanpa membaca URL: dipakai sebagai fallback Suspense (rute dinamis tidak boleh usePathname di luar Suspense). */
+export function NavTabsKerangka() {
+  return (
+    <nav className="nav-tabs">
+      {MENU.map((m) => (
+        <Link key={m.href} href={m.href} className="nav-tab">
+          {m.label}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+export function BottomNavKerangka() {
+  return (
+    <nav className="bnav" aria-label="Navigasi utama">
+      {MENU.map(({ href, label, Ikon }) => (
+        <Link key={href} href={href} className="bnav-btn">
+          <Ikon className="ic" />
+          {label}
+        </Link>
+      ))}
+    </nav>
+  );
+}

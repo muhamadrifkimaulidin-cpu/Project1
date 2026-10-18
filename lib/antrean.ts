@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 
-export type Tabel = "transaksi" | "aset" | "kontribusi" | "distribusi";
+export type Tabel = "transaksi" | "aset" | "kontribusi" | "distribusi" | "rnd_catatan";
 
 export type ItemAntrean = {
   tabel: Tabel;
@@ -39,7 +39,7 @@ const LABEL_DISTRIBUSI: Record<string, string> = {
 export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAntrean[]; milikSaya: ItemAntrean[] }> {
   const supabase = await createClient();
 
-  const [profil, trx, aset, kontribusi, distribusi] = await Promise.all([
+  const [profil, trx, aset, kontribusi, distribusi, rnd] = await Promise.all([
     supabase.from("profil").select("id, nama"),
     supabase
       .from("transaksi")
@@ -58,8 +58,13 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       .from("distribusi")
       .select("id, tanggal, jenis, jumlah, metode, owner_id, keterangan, bukti_path, dicatat_oleh, dibuat_pada")
       .eq("status", "menunggu"),
+    supabase
+      .from("rnd_catatan")
+      .select("id, tanggal, isi, keputusan, lampiran_path, dicatat_oleh, dibuat_pada, rnd_ide(judul, jalur, subjenis)")
+      .eq("status", "menunggu")
+      .eq("jenis", "keputusan"),
   ]);
-  for (const r of [profil, trx, aset, kontribusi, distribusi]) if (r.error) throw r.error;
+  for (const r of [profil, trx, aset, kontribusi, distribusi, rnd]) if (r.error) throw r.error;
 
   const nama = new Map((profil.data ?? []).map((p) => [p.id, p.nama as string]));
   const n = (id: string | null) => (id ? nama.get(id) ?? "?" : null);
@@ -71,6 +76,7 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
   aset.data!.forEach((r) => (tambah(r.foto_path), tambah(r.bukti_path)));
   kontribusi.data!.forEach((r) => tambah(r.bukti_path));
   distribusi.data!.forEach((r) => tambah(r.bukti_path));
+  rnd.data!.forEach((r) => tambah(r.lampiran_path));
 
   const url = new Map<string, string>();
   if (paths.size) {
@@ -168,6 +174,25 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       setorBarang: false,
       dibuatPada: r.dibuat_pada,
       milik: r.dicatat_oleh === userId || r.owner_id === userId,
+    });
+  }
+
+  for (const r of rnd.data!) {
+    const ide = r.rnd_ide as unknown as { judul: string } | null;
+    items.push({
+      tabel: "rnd_catatan",
+      id: r.id,
+      tanggal: r.tanggal,
+      jumlah: 0, // keputusan R&D tidak bernilai uang
+      judul: `R&D · ${r.keputusan === "diadopsi" ? "Diadopsi" : "Dihentikan"}: ${ide?.judul ?? "?"}`,
+      pencatat: n(r.dicatat_oleh)!,
+      pemilikUang: null,
+      rincian: [["keputusan", r.keputusan === "diadopsi" ? "diadopsi (dipakai)" : "dihentikan"]],
+      keterangan: r.isi,
+      foto: foto(["lampiran", r.lampiran_path]),
+      setorBarang: false,
+      dibuatPada: r.dibuat_pada,
+      milik: r.dicatat_oleh === userId,
     });
   }
 
