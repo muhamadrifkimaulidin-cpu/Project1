@@ -1,0 +1,44 @@
+# Backup audit mingguan (CLAUDE.md §7): Supabase → Google Drive "Audit 3Rally/backup/<tanggal>/"
+# Secrets (GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL      connection string Session pooler (berisi password database)
+#   RCLONE_GDRIVE_TOKEN  JSON token hasil `rclone authorize "drive"`
+name: Backup mingguan
+
+on:
+  schedule:
+    - cron: '0 18 * * 0' # Minggu 18.00 UTC = Senin 01.00 WIB
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container: postgres:17
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      RCLONE_CONFIG_GDRIVE_TYPE: drive
+      RCLONE_CONFIG_GDRIVE_SCOPE: drive
+      RCLONE_CONFIG_GDRIVE_TOKEN: ${{ secrets.RCLONE_GDRIVE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pasang rclone
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends rclone ca-certificates > /dev/null
+          rclone version | head -1
+
+      - name: Cek secrets
+        run: |
+          [ -n "$SUPABASE_DB_URL" ] || { echo "::error::Secret SUPABASE_DB_URL belum diisi"; exit 1; }
+          [ -n "$RCLONE_CONFIG_GDRIVE_TOKEN" ] || { echo "::error::Secret RCLONE_GDRIVE_TOKEN belum diisi"; exit 1; }
+
+      - name: Dump, CSV, checksum, unggah
+        run: bash scripts/backup.sh
