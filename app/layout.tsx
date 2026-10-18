@@ -9,9 +9,9 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Kedai Jus",
-  description: "Pencatatan modal, pengeluaran, dan persetujuan owner Kedai Jus",
-  appleWebApp: { capable: true, title: "Kedai Jus", statusBarStyle: "black" },
+  title: "3Rally",
+  description: "Pencatatan modal, pengeluaran, dan persetujuan owner 3Rally",
+  appleWebApp: { capable: true, title: "3Rally", statusBarStyle: "black" },
   // Next merender appleWebApp.capable sebagai mobile-web-app-capable; iPhone lama butuh tag ini
   other: { "apple-mobile-web-app-capable": "yes" },
 };

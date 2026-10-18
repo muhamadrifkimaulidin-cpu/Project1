@@ -46,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </Suspense>
       <header className="nav">
         <div className="nav-logo">
-          kedai<span className="tick">’</span>jus
+          3<span className="tick">’</span>rally
         </div>
         <NavTabs menunggu={0} />
         <TemaToggle varian="cell" />

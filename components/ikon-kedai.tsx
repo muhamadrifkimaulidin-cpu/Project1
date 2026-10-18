@@ -1,4 +1,4 @@
-// Ikon aplikasi (PWA, apple-touch-icon): blok hitam, "KJ" + tanda ’ hijau ala logo WWTP.
+// Ikon aplikasi (PWA, apple-touch-icon): blok hitam, "3R" + tanda ’ hijau ala logo WWTP.
 // Area aman maskable: isi berada di 60% tengah.
 export function IkonKedai({ size }: { size: number }) {
   return (
@@ -16,7 +16,7 @@ export function IkonKedai({ size }: { size: number }) {
         letterSpacing: -size * 0.012,
       }}
     >
-      KJ<span style={{ color: "#3FDC6A" }}>’</span>
+      3R<span style={{ color: "#3FDC6A" }}>’</span>
     </div>
   );
 }

@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Kedai Jus",
-    short_name: "Kedai Jus",
-    description: "Pencatatan modal, pengeluaran, dan persetujuan owner Kedai Jus",
+    name: "3Rally",
+    short_name: "3Rally",
+    description: "Pencatatan modal, pengeluaran, dan persetujuan owner 3Rally",
     start_url: "/beranda",
     scope: "/",
     display: "standalone",

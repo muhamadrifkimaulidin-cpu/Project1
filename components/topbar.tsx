@@ -20,7 +20,7 @@ export function Topbar({ meta }: { meta?: string }) {
 
   return (
     <div className="topbar">
-      <span className="tb-path">kedai-jus{path}</span>
+      <span className="tb-path">3rally{path}</span>
       <span className="tb-clock">{now ?? "-- : -- : --"}</span>
       {meta && <span className="tb-meta">{meta}</span>}
     </div>
