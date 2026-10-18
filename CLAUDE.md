@@ -1,10 +1,10 @@
-# Kedai Jus — Aplikasi Manajemen Owner
+# 3Rally — Aplikasi Manajemen Owner
 
 Instruksi proyek untuk Claude Code. Baca seluruh file ini sebelum menulis kode.
 
 ## 1. Konteks
 
-Tiga orang (owner) merintis kedai jus di Rengasdengklok, Karawang. Usaha **belum buka**; sekarang tahap R&D
+Tiga orang (owner) merintis kedai jus **3Rally** di Rengasdengklok, Karawang. Usaha **belum buka**; sekarang tahap R&D
 (uji racikan, belanja alat). Modal tidak disetor sekaligus — masuk sedikit demi sedikit, sering dalam bentuk
 owner membayar sendiri belanja kecil. Aplikasi ini harus memastikan **setiap rupiah yang dikeluarkan owner
 tercatat sebagai kontribusi modal dan langsung menggeser persentase kepemilikan**, dengan bukti dan
@@ -130,7 +130,7 @@ tanggal `18 Okt 2026`.
     - Target sentuh minimal 44 px; form satu kolom; tombol simpan menempel di bawah layar.
     - Input uang `inputmode="numeric"` dengan format ribuan otomatis saat mengetik.
     - Input foto `accept="image/*"` dengan pilihan kamera langsung (`capture="environment"`) atau galeri.
-    - **PWA bisa dipasang ke layar utama**: `app/manifest.ts` (nama "Kedai Jus", ikon 192 dan 512 px,
+    - **PWA bisa dipasang ke layar utama**: `app/manifest.ts` (nama "3Rally", ikon 192 dan 512 px,
       `display: "standalone"`, warna tema), meta `apple-mobile-web-app-capable` untuk iPhone. Tulis cara
       memasangnya di Android (Chrome → Tambahkan ke layar utama) dan iPhone (Safari → Share → Add to Home Screen).
     - **Tidak ada mode offline** untuk pencatatan: tampilkan pesan jelas saat tidak ada sinyal dan jangan
@@ -147,7 +147,7 @@ Supabase paket gratis tidak menyediakan backup harian yang bisa diunduh. Buat
 `.github/workflows/backup.yml`: tiap Senin 01.00 WIB (`cron: '0 18 * * 0'`) + `workflow_dispatch`,
 container `postgres:17`, `pg_dump --schema=public --no-owner --no-privileges`, `\copy` CSV untuk semua
 tabel dan view laporan, `sha256sum` → `SHA256SUMS.txt`, unggah dengan rclone ke
-`gdrive:Audit Kedai Jus/backup/<tanggal>/`. Secrets: `SUPABASE_DB_URL` (Session pooler), 
+`gdrive:Audit 3Rally/backup/<tanggal>/`. Secrets: `SUPABASE_DB_URL` (Session pooler), 
 `RCLONE_GDRIVE_TOKEN`. Folder per tanggal tidak pernah ditimpa.
 
 ## 8. Cara kerja dengan Rifki

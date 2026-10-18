@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 /* ============================================
-   Kedai Jus — design system
+   3Rally — design system
    Di-port dari WWTP Operations System v6 (repo wwtpinput, Stylesheet.html):
    editorial grid · light/dark · mobile-first
    ============================================ */
@@ -370,7 +370,7 @@ input[inputmode="decimal"] { font-variant-numeric: tabular-nums; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 
-/* ========== KEDAI JUS: tambahan ========== */
+/* ========== 3RALLY: tambahan ========== */
 a { color: inherit; text-decoration: none; }
 input[type="email"] {
   width: 100%; min-height: 46px; padding: 10px 12px; background: var(--input); border: 1px solid var(--line); border-radius: var(--r);

@@ -1,6 +1,6 @@
 // Ikon aplikasi (PWA, apple-touch-icon): blok hitam, "3R" + tanda ’ hijau ala logo WWTP.
 // Area aman maskable: isi berada di 60% tengah.
-export function IkonKedai({ size }: { size: number }) {
+export function Ikon3Rally({ size }: { size: number }) {
   return (
     <div
       style={{

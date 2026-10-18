@@ -3,7 +3,7 @@
 # Pakai: supabase/tests/run_local.sh   (butuh psql + server PostgreSQL yang bisa diakses sebagai superuser)
 set -euo pipefail
 cd "$(dirname "$0")/.."
-DB=${DB:-kedai_jus_uji}
+DB=${DB:-trally_uji}
 PSQL=${PSQL:-"psql -X -q -v ON_ERROR_STOP=1"}
 
 dropdb --if-exists "$DB"

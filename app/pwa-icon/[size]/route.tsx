@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { IkonKedai } from "@/components/ikon-kedai";
+import { Ikon3Rally } from "@/components/ikon-3rally";
 
 const UKURAN = [192, 512];
 
@@ -10,5 +10,5 @@ export function generateStaticParams() {
 export async function GET(_req: Request, { params }: { params: Promise<{ size: string }> }) {
   const size = Number((await params).size);
   if (!UKURAN.includes(size)) return new Response("Not found", { status: 404 });
-  return new ImageResponse(<IkonKedai size={size} />, { width: size, height: size });
+  return new ImageResponse(<Ikon3Rally size={size} />, { width: size, height: size });
 }
