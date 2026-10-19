@@ -52,8 +52,8 @@ async function Porsi() {
       csv={
         <TombolCsv
           nama="porsi"
-          kolom={["owner", ...BENTUK, "total_kontribusi", "penarikan_modal", "modal_bersih", "porsi_persen"]}
-          baris={porsi.map((p) => [p.nama, ...BENTUK.map((b) => p.perBentuk[b]), p.totalKontribusi, p.totalPenarikan, p.modalBersih, p.persen])}
+          kolom={["owner", ...BENTUK, "total_kontribusi", "penarikan_modal", "ganti_antar_owner", "modal_bersih", "porsi_persen"]}
+          baris={porsi.map((p) => [p.nama, ...BENTUK.map((b) => p.perBentuk[b]), p.totalKontribusi, p.totalPenarikan, p.pindahModal, p.modalBersih, p.persen])}
         />
       }
     >
@@ -71,6 +71,12 @@ async function Porsi() {
               <div className="lap-kv-row">
                 <dt>penarikan modal</dt>
                 <dd>−{rupiah(p.totalPenarikan)}</dd>
+              </div>
+            )}
+            {p.pindahModal !== 0 && (
+              <div className="lap-kv-row">
+                <dt>ganti antar-owner</dt>
+                <dd>{p.pindahModal > 0 ? "+" : "−"}{rupiah(Math.abs(p.pindahModal))}</dd>
               </div>
             )}
             <div className="lap-kv-row lap-kv-total">

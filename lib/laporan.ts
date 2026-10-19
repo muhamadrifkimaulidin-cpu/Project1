@@ -22,6 +22,7 @@ export type PorsiRinci = {
   perBentuk: Record<Bentuk, number>;
   totalKontribusi: number;
   totalPenarikan: number;
+  pindahModal: number; // ganti antar-owner bersih: + diterima dari pengganti, − dialihkan (migrasi 007)
   modalBersih: number;
   persen: number | null;
 };
@@ -30,7 +31,7 @@ export type PorsiRinci = {
 export async function ambilPorsiRinci(): Promise<PorsiRinci[]> {
   const supabase = await createClient();
   const [porsi, bentuk] = await Promise.all([
-    supabase.from("v_porsi_kepemilikan").select("owner_id, nama, total_kontribusi, total_penarikan, modal_bersih, persen").order("nama"),
+    supabase.from("v_porsi_kepemilikan").select("owner_id, nama, total_kontribusi, total_penarikan, modal_bersih, persen, pindah_modal").order("nama"),
     supabase.from("v_kontribusi_per_bentuk").select("owner_id, bentuk, total"),
   ]);
   if (porsi.error) throw porsi.error;
@@ -44,6 +45,7 @@ export async function ambilPorsiRinci(): Promise<PorsiRinci[]> {
       perBentuk,
       totalKontribusi: angka(p.total_kontribusi),
       totalPenarikan: angka(p.total_penarikan),
+      pindahModal: angka(p.pindah_modal),
       modalBersih: angka(p.modal_bersih),
       persen: p.persen === null ? null : angka(p.persen),
     };

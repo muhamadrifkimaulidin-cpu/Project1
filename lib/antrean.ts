@@ -2,7 +2,7 @@ import { ambilCatatan, namaAsetTertaut, type TabelCatatan } from "@/lib/riwayat"
 import { createClient } from "@/lib/supabase/server";
 import { tanggal as fmtTanggal } from "@/lib/format";
 
-export type Tabel = "transaksi" | "aset" | "kontribusi" | "distribusi" | "rnd_catatan" | "pengajuan_batal";
+export type Tabel = "transaksi" | "aset" | "kontribusi" | "distribusi" | "rnd_catatan" | "pengajuan_batal" | "ganti_modal";
 
 export type ItemAntrean = {
   tabel: Tabel;
@@ -16,6 +16,7 @@ export type ItemAntrean = {
   keterangan: string | null;
   foto: { label: string; url: string }[];
   setorBarang: boolean; // nilai boleh diubah penyetuju (aset setor_barang)
+  penyetujuKhusus?: string; // ganti antar-owner: hanya pihak lawan yang bisa menyetujui
   dibuatPada: string;
 };
 
@@ -42,7 +43,7 @@ const LABEL_DISTRIBUSI: Record<string, string> = {
 export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAntrean[]; milikSaya: ItemAntrean[] }> {
   const supabase = await createClient();
 
-  const [profil, trx, aset, kontribusi, distribusi, rnd, ajuan] = await Promise.all([
+  const [profil, trx, aset, kontribusi, distribusi, rnd, ajuan, ganti] = await Promise.all([
     supabase.from("profil").select("id, nama"),
     supabase
       .from("transaksi")
@@ -71,8 +72,12 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
       .from("pengajuan_batal")
       .select("id, tabel, baris_id, alasan, diajukan_oleh, dibuat_pada")
       .eq("status", "menunggu"),
+    supabase
+      .from("ganti_modal")
+      .select("id, penerima_id, pengganti_id, dicatat_oleh, dibuat_pada")
+      .eq("status", "menunggu"),
   ]);
-  for (const r of [profil, trx, aset, kontribusi, distribusi, rnd, ajuan]) if (r.error) throw r.error;
+  for (const r of [profil, trx, aset, kontribusi, distribusi, rnd, ajuan, ganti]) if (r.error) throw r.error;
 
   const nama = new Map((profil.data ?? []).map((p) => [p.id, p.nama as string]));
   const n = (id: string | null) => (id ? nama.get(id) ?? "?" : null);
@@ -233,6 +238,34 @@ export async function ambilAntrean(userId: string): Promise<{ bolehSaya: ItemAnt
         setorBarang: false,
         dibuatPada: p.dibuat_pada,
         milik: p.diajukan_oleh === userId,
+      });
+    }
+  }
+
+  // Ganti antar-owner: hanya untuk dua pihak yang terlibat; disetujui pihak lawan pencatat
+  const gantiSaya = ganti.data!.filter((g) => g.dicatat_oleh === userId || g.penerima_id === userId || g.pengganti_id === userId);
+  if (gantiSaya.length) {
+    const { items: target } = await ambilCatatan({ ids: { ganti_modal: gantiSaya.map((g) => g.id) } });
+    const peta = new Map(target.map((t) => [t.id, t]));
+    for (const g of gantiSaya) {
+      const t = peta.get(g.id);
+      if (!t) continue;
+      const lawan = g.dicatat_oleh === g.penerima_id ? g.pengganti_id : g.penerima_id;
+      items.push({
+        tabel: "ganti_modal",
+        id: g.id,
+        tanggal: t.tanggal,
+        jumlah: t.jumlah,
+        judul: t.judul,
+        pencatat: t.pencatat,
+        pemilikUang: t.pemilik,
+        rincian: t.rincian,
+        keterangan: t.keterangan,
+        foto: t.foto,
+        setorBarang: false,
+        penyetujuKhusus: n(lawan)!,
+        dibuatPada: g.dibuat_pada,
+        milik: g.dicatat_oleh === userId,
       });
     }
   }
