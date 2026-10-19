@@ -87,6 +87,12 @@ export const hitungMenungguSaya = cache(async (userId: string): Promise<number> 
       supabase.from("pengajuan_batal").select("id", opsi)
         .eq("status", "menunggu").neq("diajukan_oleh", userId),
     ),
+    hitung(
+      // ganti antar-owner: saya pihak lawan dari pencatatnya
+      supabase.from("ganti_modal").select("id", opsi)
+        .eq("status", "menunggu").neq("dicatat_oleh", userId)
+        .or(`penerima_id.eq.${userId},pengganti_id.eq.${userId}`),
+    ),
   ]);
   return jumlah.reduce((a, b) => a + b, 0);
 });

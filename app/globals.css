@@ -537,3 +537,12 @@ input[type="email"] {
 .notif-aksi { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .notif-aksi .btn-go { flex: 1; }
 .notif-pesan { margin-top: 10px; }
+
+/* ========== GANTI ANTAR-OWNER ========== */
+.ganti-ringkas { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line-soft); border-radius: var(--r); background: var(--panel); }
+.ganti-ringkas ul { margin: 6px 0 0; padding-left: 1.1em; font-size: .88rem; }
+.ganti-ringkas li { margin: 2px 0; }
+.ganti-ringkas .status { margin-left: 6px; vertical-align: middle; }
+.ganti-form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.ganti-form .chips { margin-top: 6px; }
+.card .ganti-pesan { margin: 12px 0 0; }

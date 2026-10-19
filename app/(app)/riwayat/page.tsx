@@ -1,4 +1,5 @@
 import { Mega } from "@/components/judul";
+import { FormGanti } from "@/components/form-ganti";
 import { AksiRiwayat } from "@/components/riwayat-aksi";
 import { PilihFilter } from "@/components/riwayat-filter";
 import { ambilKategori } from "@/lib/data";
@@ -26,7 +27,7 @@ function sebagaiQuery(f: Filter): Record<string, string> {
   return Object.fromEntries(Object.entries(f).filter(([, v]) => v)) as Record<string, string>;
 }
 
-function Kartu({ item, userId }: { item: ItemRiwayat; userId: string }) {
+function Kartu({ item, userId, owner }: { item: ItemRiwayat; userId: string; owner: { id: string; nama: string }[] }) {
   return (
     <article className={`card${item.status === "batal" ? " card-batal" : ""}`}>
       <div className="card-h">
@@ -82,6 +83,28 @@ function Kartu({ item, userId }: { item: ItemRiwayat; userId: string }) {
       ) : (
         !item.adaBukti && item.status !== "batal" && <div className="notice warn bukti-kosong">Belum ada foto bukti.</div>
       )}
+      {item.ganti && (
+        <div className="ganti-ringkas">
+          <p className="slug">pembagian-bayar/</p>
+          <ul>
+            <li>
+              dibayar duluan oleh <b>{item.ganti.pembayar}</b>: {rupiah(item.ganti.total)}
+            </li>
+            {item.ganti.diganti.map((d, i) => (
+              <li key={i}>
+                {d.nama} mengganti {rupiah(d.jumlah)}
+                {d.status === "menunggu" && <span className="status st-pending">menunggu</span>}
+              </li>
+            ))}
+            <li>
+              masih ditanggung {item.ganti.pembayar}: <b>{rupiah(item.ganti.sisa)}</b>
+            </li>
+          </ul>
+          {!item.pengajuan && item.tabel !== "ganti_modal" && (
+            <FormGanti tabel={item.tabel as "transaksi" | "aset"} belanjaId={item.id} info={item.ganti} userId={userId} owner={owner} />
+          )}
+        </div>
+      )}
       <AksiRiwayat item={item} userId={userId} />
     </article>
   );
@@ -112,10 +135,11 @@ async function Daftar({ searchParams }: { searchParams: SP }) {
           <Link href={tautan(f, { jenis: "transaksi", kategori: f.kategori })} className={chip(f.jenis === "transaksi")}>transaksi</Link>
           <Link href={tautan(f, { jenis: "aset", kategori: null })} className={chip(f.jenis === "aset")}>aset</Link>
           <Link href={tautan(f, { jenis: "setor", kategori: null })} className={chip(f.jenis === "setor")}>setor uang</Link>
+          <Link href={tautan(f, { jenis: "ganti", kategori: null })} className={chip(f.jenis === "ganti")}>ganti antar-owner</Link>
         </div>
         <div className="filter-pilih">
           <PilihFilter kunci="owner" nilai={f.owner} semua="semua owner" opsi={owner} query={query} />
-          {f.jenis !== "aset" && f.jenis !== "setor" && (
+          {(!f.jenis || f.jenis === "transaksi") && (
             <PilihFilter kunci="kategori" nilai={f.kategori} semua="semua kategori" opsi={kategori} query={query} />
           )}
         </div>
@@ -138,7 +162,7 @@ async function Daftar({ searchParams }: { searchParams: SP }) {
       ) : (
         <div className="cards">
           {items.map((i) => (
-            <Kartu key={`${i.tabel}-${i.id}`} item={i} userId={userId} />
+            <Kartu key={`${i.tabel}-${i.id}`} item={i} userId={userId} owner={owner} />
           ))}
         </div>
       )}

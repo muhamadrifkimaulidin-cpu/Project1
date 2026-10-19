@@ -1,8 +1,9 @@
+import { rupiah } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
-export type TabelCatatan = "transaksi" | "aset" | "kontribusi";
+export type TabelCatatan = "transaksi" | "aset" | "kontribusi" | "ganti_modal";
 export type StatusCatatan = "menunggu" | "aktif" | "batal";
-export type JenisRiwayat = "transaksi" | "aset" | "setor";
+export type JenisRiwayat = "transaksi" | "aset" | "setor" | "ganti";
 
 export type Filter = {
   status: StatusCatatan | null;
@@ -12,6 +13,15 @@ export type Filter = {
 };
 
 export type PengajuanTerbuka = { id: string; alasan: string; olehId: string; oleh: string };
+
+/** Penggantian antar-owner atas satu belanja yang dibayar uang pribadi (migrasi 007). */
+export type InfoGanti = {
+  pembayarId: string;
+  pembayar: string;
+  total: number;
+  diganti: { nama: string; jumlah: number; status: "menunggu" | "aktif" }[];
+  sisa: number; // belum diganti (aktif + menunggu dihitung terpakai)
+};
 
 export type ItemRiwayat = {
   tabel: TabelCatatan;
@@ -31,6 +41,7 @@ export type ItemRiwayat = {
   foto: { label: string; url: string }[];
   adaBukti: boolean;
   ikutTransaksi: boolean; // aset yang mengikuti status transaksi "Pembelian aset"-nya (migrasi 005)
+  ganti: InfoGanti | null; // hanya belanja uang pribadi (modal) yang aktif
   pengajuan: PengajuanTerbuka | null;
   dibuatPada: string;
 };
@@ -60,7 +71,7 @@ export function bacaFilter(sp: Record<string, string | string[] | undefined>): F
   const kategori = s("kategori");
   return {
     status: status === "menunggu" || status === "aktif" || status === "batal" ? status : null,
-    jenis: jenis === "transaksi" || jenis === "aset" || jenis === "setor" ? jenis : null,
+    jenis: jenis === "transaksi" || jenis === "aset" || jenis === "setor" || jenis === "ganti" ? jenis : null,
     owner: owner && UUID.test(owner) ? owner : null,
     kategori: kategori && UUID.test(kategori) ? kategori : null,
   };
@@ -82,7 +93,7 @@ export async function ambilCatatan(opsi: {
     if (ids) return (ids[t]?.length ?? 0) > 0;
     if (f.kategori && t !== "transaksi") return false;
     if (!f.jenis) return true;
-    return (f.jenis === "setor" ? "kontribusi" : f.jenis) === t;
+    return ({ setor: "kontribusi", ganti: "ganti_modal" } as Record<string, string>)[f.jenis] === t || f.jenis === t;
   };
 
   const kosong = Promise.resolve({ data: [] as never[], error: null });
@@ -119,14 +130,27 @@ export async function ambilCatatan(opsi: {
     return q.order("tanggal", urut).order("dibuat_pada", urut).limit(BATAS_PER_JENIS);
   };
 
-  const [profil, trx, aset, kontribusi, pengajuan] = await Promise.all([
+  const qGanti = () => {
+    let q = supabase
+      .from("ganti_modal")
+      .select("id, tanggal, penerima_id, pengganti_id, jumlah, transaksi_id, aset_id, metode, keterangan, bukti_path, status, dicatat_oleh, disetujui_oleh, alasan_batal, dibuat_pada, transaksi(tanggal, jumlah, kategori(nama)), aset(nama, harga_beli)");
+    if (ids) return q.in("id", ids.ganti_modal ?? []);
+    if (f.status) q = q.eq("status", f.status);
+    if (f.owner) q = q.or(`dicatat_oleh.eq.${f.owner},penerima_id.eq.${f.owner},pengganti_id.eq.${f.owner}`);
+    return q.order("tanggal", urut).order("dibuat_pada", urut).limit(BATAS_PER_JENIS);
+  };
+
+  const [profil, trx, aset, kontribusi, gantiRows, gantiTerpakai, pengajuan] = await Promise.all([
     supabase.from("profil").select("id, nama"),
     perlu("transaksi") ? qTrx() : kosong,
     perlu("aset") ? qAset() : kosong,
     perlu("kontribusi") ? qSetor() : kosong,
+    perlu("ganti_modal") ? qGanti() : kosong,
+    // semua ganti yang masih berlaku, untuk ringkasan "sudah diganti / sisa" di kartu belanja
+    supabase.from("ganti_modal").select("transaksi_id, aset_id, pengganti_id, jumlah, status").in("status", ["menunggu", "aktif"]),
     supabase.from("pengajuan_batal").select("id, tabel, baris_id, alasan, diajukan_oleh").eq("status", "menunggu"),
   ]);
-  for (const r of [profil, trx, aset, kontribusi, pengajuan]) if (r.error) throw r.error;
+  for (const r of [profil, trx, aset, kontribusi, gantiRows, gantiTerpakai, pengajuan]) if (r.error) throw r.error;
 
   const nama = new Map((profil.data ?? []).map((p) => [p.id as string, p.nama as string]));
   const n = (id: string | null) => (id ? nama.get(id) ?? "?" : null);
@@ -142,6 +166,7 @@ export async function ambilCatatan(opsi: {
   trx.data!.forEach((r) => tambah(r.bukti_path));
   aset.data!.forEach((r) => (tambah(r.foto_path), tambah(r.bukti_path)));
   kontribusi.data!.forEach((r) => tambah(r.bukti_path));
+  gantiRows.data!.forEach((r) => tambah(r.bukti_path));
   const url = new Map<string, string>();
   if (paths.size) {
     const { data, error } = await supabase.storage.from("bukti").createSignedUrls([...paths], BERLAKU_URL_DETIK);
@@ -150,6 +175,20 @@ export async function ambilCatatan(opsi: {
   }
   const foto = (...xs: [string, string | null][]) =>
     xs.flatMap(([label, p]) => (p && url.has(p) ? [{ label, url: url.get(p)! }] : []));
+
+  // Ringkasan ganti per belanja: kunci "transaksi:<id>" / "aset:<id>"
+  const gantiPer = new Map<string, InfoGanti["diganti"]>();
+  for (const g of gantiTerpakai.data ?? []) {
+    const k = g.transaksi_id ? `transaksi:${g.transaksi_id}` : `aset:${g.aset_id}`;
+    const daftar = gantiPer.get(k) ?? [];
+    daftar.push({ nama: n(g.pengganti_id)!, jumlah: Number(g.jumlah), status: g.status });
+    gantiPer.set(k, daftar);
+  }
+  const infoGanti = (k: string, pembayarId: string | null, total: number, aktif: boolean, modal: boolean): InfoGanti | null => {
+    if (!pembayarId || !aktif || !modal) return null;
+    const diganti = gantiPer.get(k) ?? [];
+    return { pembayarId, pembayar: n(pembayarId)!, total, diganti, sisa: total - diganti.reduce((a, d) => a + d.jumlah, 0) };
+  };
 
   const items: ItemRiwayat[] = [];
   const umum = (t: TabelCatatan, r: { id: string; status: StatusCatatan; dicatat_oleh: string; disetujui_oleh: string | null; alasan_batal: string | null; dibuat_pada: string }) => ({
@@ -190,6 +229,7 @@ export async function ambilCatatan(opsi: {
       foto: foto(["nota", r.bukti_path]),
       adaBukti: !!r.bukti_path,
       ikutTransaksi: false,
+      ganti: infoGanti(`transaksi:${r.id}`, r.dibayar_owner_id, Number(r.jumlah), r.status === "aktif", r.klaim === "modal"),
     });
   }
 
@@ -212,6 +252,7 @@ export async function ambilCatatan(opsi: {
       // barang setoran tidak punya nota: foto barangnya dihitung sebagai bukti
       adaBukti: !!r.bukti_path || (r.sumber === "setor_barang" && !!r.foto_path),
       ikutTransaksi: !!r.transaksi_id,
+      ganti: infoGanti(`aset:${r.id}`, r.dibayar_owner_id, Number(r.harga_beli), r.status === "aktif", r.sumber === "beli_owner"),
     });
   }
 
@@ -231,10 +272,37 @@ export async function ambilCatatan(opsi: {
       foto: foto(["bukti transfer", r.bukti_path]),
       adaBukti: !!r.bukti_path,
       ikutTransaksi: false,
+      ganti: null,
+    });
+  }
+
+  for (const r of gantiRows.data!) {
+    const t = r.transaksi as unknown as { tanggal: string; jumlah: number; kategori: { nama: string } | null } | null;
+    const a = r.aset as unknown as { nama: string; harga_beli: number } | null;
+    const untuk = t
+      ? `${t.kategori?.nama ?? "belanja"} ${rupiah(t.jumlah)} (${t.tanggal})`
+      : `aset ${a?.nama ?? "?"} ${rupiah(a?.harga_beli)}`;
+    items.push({
+      ...umum("ganti_modal", r),
+      tanggal: r.tanggal,
+      jumlah: Number(r.jumlah),
+      judul: `Ganti · ${n(r.pengganti_id)} → ${n(r.penerima_id)}`,
+      rincian: [
+        ["untuk", untuk],
+        ["metode", r.metode],
+        ["efek", `modal ${n(r.pengganti_id)} +, modal ${n(r.penerima_id)} − (kas tetap)`],
+      ],
+      keterangan: r.keterangan,
+      pemilikId: r.pengganti_id,
+      pemilik: n(r.pengganti_id),
+      foto: foto(["bukti transfer", r.bukti_path]),
+      adaBukti: !!r.bukti_path,
+      ikutTransaksi: false,
+      ganti: null,
     });
   }
 
   items.sort((a, b) => b.tanggal.localeCompare(a.tanggal) || b.dibuatPada.localeCompare(a.dibuatPada));
-  const terpotong = [trx, aset, kontribusi].some((r) => (r.data?.length ?? 0) >= BATAS_PER_JENIS);
+  const terpotong = [trx, aset, kontribusi, gantiRows].some((r) => (r.data?.length ?? 0) >= BATAS_PER_JENIS);
   return { items, terpotong };
 }
