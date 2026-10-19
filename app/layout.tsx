@@ -37,6 +37,23 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+/**
+ * Deploy Preview Vercel memakai database UJI (variabel Supabase environment Preview), Production memakai
+ * database asli. Pita ini mencegah catatan sungguhan masuk ke database uji karena salah buka alamat.
+ */
+function PitaModeUji() {
+  if (process.env.VERCEL_ENV !== "preview") return null;
+  let proyek = "?";
+  try {
+    proyek = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname.split(".")[0];
+  } catch {}
+  return (
+    <div className="pita-uji" role="status">
+      MODE UJI · database {proyek} · catatan di sini bukan data asli
+    </div>
+  );
+}
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html
@@ -45,6 +62,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${inter.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <body>
+        <PitaModeUji />
         <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem storageKey="kj_theme">
           {children}
         </ThemeProvider>
