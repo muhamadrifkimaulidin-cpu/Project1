@@ -128,6 +128,9 @@ begin
   perform pg_temp.uji('15 C tolak dengan alasan -> ditolak', C,
     format($q$update patungan set status = 'ditolak', alasan = 'sudah bayar tunai di luar' where id = %L$q$, pC), false,
     format(vp, 'status', pC) || $c$ = 'ditolak'$c$);
+  perform pg_temp.uji('15c C catat belanja sedotan Rp30.000 (dipakai di uji 32)', C, format(
+    $q$insert into transaksi (id, outlet_id, tanggal, jenis, kategori_id, jumlah, metode, sumber_dana, dibayar_owner_id, klaim)
+       values (%L, %L, current_date, 'pengeluaran', %L, 30000, 'tunai', 'owner', %L, 'modal')$q$, t4, O, kat, C), false);
   perform pg_temp.uji('16 C ganti lepas Rp250.000 (melebihi sisa belanja) -> ditolak', C, format(ganti, gen_random_uuid(), A, C, 250000, t1), true);
   perform pg_temp.uji('17 A ubah jumlah tagihan B -> ditolak', A,
     format($q$update patungan set jumlah = 1000 where id = %L$q$, pB), true);
@@ -177,6 +180,18 @@ begin
     $q$insert into aset (id, outlet_id, nama, tanggal_beli, harga_beli, sumber, dibayar_owner_id) values (%L, %L, 'Juicer', current_date, 600000, 'beli_owner', %L);
        insert into patungan (aset_id, penagih_id, tertagih_id, jumlah) values (%L, %L, %L, 200000)$q$, a1, O, A, a1, A, C), false,
     format($c$(select count(*) from patungan where aset_id = %L and status = 'terbuka') = 1$c$, a1));
+  perform pg_temp.uji('32b B (bukan pihak) tolak tagihan aset milik C -> tidak berubah', B, format(
+    $q$update patungan set status = 'ditolak', alasan = 'x', tanggung_transaksi_id = %L where aset_id = %L and tertagih_id = %L$q$, t1, a1, C), false,
+    format($c$(select status from patungan where aset_id = %L) = 'terbuka'$c$, a1));
+  perform pg_temp.uji('32bb C tolak sambil menautkan belanja milik A -> ditolak', C, format(
+    $q$update patungan set status = 'ditolak', alasan = 'x', tanggung_transaksi_id = %L where aset_id = %L$q$, t1, a1), true,
+    format($c$(select status from patungan where aset_id = %L) = 'terbuka'$c$, a1));
+  perform pg_temp.uji('32c C tolak tagihan aset sambil menautkan sedotannya', C, format(
+    $q$update patungan set status = 'ditolak', alasan = 'saya sudah beli sedotan', tanggung_transaksi_id = %L where aset_id = %L$q$, t4, a1), false,
+    format($c$(select status = 'ditolak' and tanggung_transaksi_id = %L from patungan where aset_id = %L)$c$, t4, a1));
+  perform pg_temp.uji('32d ubah tautan setelah ditolak -> tidak berubah', C, format(
+    $q$update patungan set tanggung_transaksi_id = null where aset_id = %L$q$, a1), false,
+    format($c$(select tanggung_transaksi_id from patungan where aset_id = %L) = %L$c$, a1, t4));
   perform pg_temp.uji('33 hapus patungan -> ditolak', A, 'delete from patungan', true,
     $c$(select count(*) from patungan where penagih_id = 'aaaaaaaa-0000-4000-8000-000000000001') = 5$c$);
 end $$;
@@ -195,7 +210,7 @@ begin
                                                  'Pengingat patungan', 'Patungan belum lunas');
     insert into hasil (uji, lulus, catatan) values ('34 notifikasi patungan ke pihak yang tepat (lokal)',
       v = 'Diminta patungan>b ; Diminta patungan>c ; Patungan ditolak>a ; Pengingat patungan>b ; Patungan belum lunas>b ; '
-          || 'Diminta patungan>b ; Patungan dibatalkan>b ; Diminta patungan>c ; Patungan dibatalkan>c ; Diminta patungan>c',
+          || 'Diminta patungan>b ; Patungan dibatalkan>b ; Diminta patungan>c ; Patungan dibatalkan>c ; Diminta patungan>c ; Patungan ditolak>a',
       coalesce(v, '(kosong)'));
   end if;
 end $$;

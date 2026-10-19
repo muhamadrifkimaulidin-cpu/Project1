@@ -1,4 +1,5 @@
 import { rupiah } from "@/lib/format";
+import { ambilPatunganPerBelanja, type Patungan } from "@/lib/patungan";
 import { createClient } from "@/lib/supabase/server";
 
 export type TabelCatatan = "transaksi" | "aset" | "kontribusi" | "ganti_modal";
@@ -21,6 +22,8 @@ export type InfoGanti = {
   total: number;
   diganti: { nama: string; jumlah: number; status: "menunggu" | "aktif" }[];
   sisa: number; // belum diganti (aktif + menunggu dihitung terpakai)
+  patungan: Patungan[]; // tagihan patungan (migrasi 008), selain yang dibatalkan
+  bebas: number; // sisa dikurangi tagihan patungan terbuka yang belum dibayar: batas ganti lepas / tagihan baru
 };
 
 export type ItemRiwayat = {
@@ -152,6 +155,12 @@ export async function ambilCatatan(opsi: {
   ]);
   for (const r of [profil, trx, aset, kontribusi, gantiRows, gantiTerpakai, pengajuan]) if (r.error) throw r.error;
 
+  // Patungan hanya untuk belanja uang pribadi (modal) yang aktif: sama dengan syarat kartu pembagian-bayar
+  const patunganPer = await ambilPatunganPerBelanja(
+    trx.data!.filter((r) => r.dibayar_owner_id && r.klaim === "modal" && r.status === "aktif").map((r) => r.id),
+    aset.data!.filter((r) => r.sumber === "beli_owner" && r.status === "aktif").map((r) => r.id),
+  );
+
   const nama = new Map((profil.data ?? []).map((p) => [p.id as string, p.nama as string]));
   const n = (id: string | null) => (id ? nama.get(id) ?? "?" : null);
   const ajuan = new Map(
@@ -187,7 +196,10 @@ export async function ambilCatatan(opsi: {
   const infoGanti = (k: string, pembayarId: string | null, total: number, aktif: boolean, modal: boolean): InfoGanti | null => {
     if (!pembayarId || !aktif || !modal) return null;
     const diganti = gantiPer.get(k) ?? [];
-    return { pembayarId, pembayar: n(pembayarId)!, total, diganti, sisa: total - diganti.reduce((a, d) => a + d.jumlah, 0) };
+    const patungan = patunganPer.get(k) ?? [];
+    const sisa = total - diganti.reduce((a, d) => a + d.jumlah, 0);
+    const tertahan = patungan.filter((p) => p.status === "terbuka").reduce((a, p) => a + p.sisa, 0);
+    return { pembayarId, pembayar: n(pembayarId)!, total, diganti, sisa, patungan, bebas: sisa - tertahan };
   };
 
   const items: ItemRiwayat[] = [];
