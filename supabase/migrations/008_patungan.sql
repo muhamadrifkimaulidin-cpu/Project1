@@ -28,18 +28,12 @@ create table patungan (
   jumlah             numeric(14, 2) not null check (jumlah > 0),
   status             text not null default 'terbuka' check (status in ('terbuka', 'ditolak', 'dibatalkan')),
   alasan             text,                                   -- wajib bila ditolak/dibatalkan
-  -- Saat menolak, yang ditagih boleh menautkan belanja uang pribadinya sendiri yang ia tanggung
-  -- sebagai gantinya (keterangan audit saja; modalnya sudah dihitung dari belanja itu sendiri)
-  tanggung_transaksi_id uuid references transaksi (id),
-  tanggung_aset_id      uuid references aset (id),
   diputuskan_pada    timestamptz,
   pengingat_terakhir timestamptz not null default now(),
   dibuat_pada        timestamptz not null default now(),
   check (penagih_id <> tertagih_id),
   check ((transaksi_id is null) <> (aset_id is null)),
-  check (status = 'terbuka' or nullif(btrim(alasan), '') is not null),
-  check (tanggung_transaksi_id is null or tanggung_aset_id is null),
-  check (status = 'ditolak' or (tanggung_transaksi_id is null and tanggung_aset_id is null))
+  check (status = 'terbuka' or nullif(btrim(alasan), '') is not null)
 );
 -- Satu tagihan terbuka per orang per belanja (tambah jumlah = batalkan lalu minta ulang)
 create unique index patungan_satu_terbuka on patungan (coalesce(transaksi_id, aset_id), tertagih_id)
@@ -105,8 +99,6 @@ declare
 begin
   new.status             := 'terbuka';
   new.alasan             := null;
-  new.tanggung_transaksi_id := null;
-  new.tanggung_aset_id      := null;
   new.diputuskan_pada    := null;
   new.pengingat_terakhir := now();
   new.dibuat_pada        := now();
@@ -167,20 +159,6 @@ begin
   end if;
   if new.status = 'dibatalkan' and auth.uid() is distinct from old.penagih_id then
     raise exception 'Hanya yang meminta yang bisa membatalkan patungan';
-  end if;
-
-  if new.status <> 'ditolak' and (new.tanggung_transaksi_id is not null or new.tanggung_aset_id is not null) then
-    raise exception 'Belanja yang ditanggung hanya diisi saat menolak';
-  end if;
-  if new.tanggung_transaksi_id is not null or new.tanggung_aset_id is not null then
-    -- dibaca dengan hak pengguna (RLS owner), bukan lewat fungsi internal
-    select dibayar_owner_id as pemilik, status into v from transaksi
-     where id = new.tanggung_transaksi_id and sumber_dana = 'owner' and klaim = 'modal'
-    union all
-    select dibayar_owner_id, status from aset where id = new.tanggung_aset_id and sumber = 'beli_owner';
-    if v.pemilik is distinct from old.tertagih_id or v.status = 'batal' then
-      raise exception 'Belanja yang ditanggung harus belanja uang pribadi (modal) milik yang menolak dan belum batal';
-    end if;
   end if;
 
   select * into v from v_patungan where id = old.id;
