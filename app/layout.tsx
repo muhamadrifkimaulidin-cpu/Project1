@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Inter_Tight, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
+import { MODE_UJI, NAMA_APLIKASI } from "@/lib/mode";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
@@ -9,9 +10,9 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "3Rally",
+  title: NAMA_APLIKASI,
   description: "Pencatatan modal, pengeluaran, dan persetujuan owner 3Rally",
-  appleWebApp: { capable: true, title: "3Rally", statusBarStyle: "black" },
+  appleWebApp: { capable: true, title: NAMA_APLIKASI, statusBarStyle: "black" },
   // Next merender appleWebApp.capable sebagai mobile-web-app-capable; iPhone lama butuh tag ini
   other: { "apple-mobile-web-app-capable": "yes" },
 };
@@ -20,7 +21,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  themeColor: "#000000",
+  themeColor: MODE_UJI ? "#F2B53A" : "#000000",
 };
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
@@ -42,7 +43,7 @@ const jetbrainsMono = JetBrains_Mono({
  * database asli. Pita ini mencegah catatan sungguhan masuk ke database uji karena salah buka alamat.
  */
 function PitaModeUji() {
-  if (process.env.VERCEL_ENV !== "preview") return null;
+  if (!MODE_UJI) return null;
   let proyek = "?";
   try {
     proyek = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").hostname.split(".")[0];
