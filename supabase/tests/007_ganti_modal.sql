@@ -72,6 +72,8 @@ declare
                      values (%L, %L, current_date, 'pengeluaran', %L, %s, 'tunai', 'owner', %L, 'modal')$q$;
   ganti text := $q$insert into ganti_modal (id, penerima_id, pengganti_id, jumlah, transaksi_id, metode) values (%L, %L, %L, %s, %L, 'transfer')$q$;
   st text := $c$(select status from ganti_modal where id = %L) = %L$c$;
+  -- Supabase sungguhan sudah berisi data owner asli: cek relatif terhadap kondisi awal, bukan nilai absolut
+  kas0 numeric := (select saldo_kas from v_saldo_kas);
 begin
   -- Persiapan: B membayar belanja Rp300.000 dengan uang pribadi, A menyetujui
   perform pg_temp.uji('00 B catat belanja Rp300.000 uang pribadi', B, format(pribadi, t1, O, kat, 300000, B), false);
@@ -89,16 +91,16 @@ begin
     format($q$update ganti_modal set status = 'aktif' where id = %L$q$, g1), false,
     format($c$pg_temp.modal(%L) = 100000 and pg_temp.modal(%L) = 200000
               and (select pindah_modal from v_porsi_kepemilikan where owner_id = %L) = -100000
-              and (select saldo_kas from v_saldo_kas) = 0
-              and (select disetujui_oleh from ganti_modal where id = %L) = %L$c$, A, B, B, g1, B));
+              and (select saldo_kas from v_saldo_kas) = %s
+              and (select disetujui_oleh from ganti_modal where id = %L) = %L$c$, A, B, B, kas0, g1, B));
 
   -- 2. Dicatat penerima, disetujui pengganti
   perform pg_temp.uji('05 B catat "C sudah ganti Rp100.000" -> menunggu', B, format(ganti, g2, B, C, 100000, t1), false,
     format(st, g2, 'menunggu'));
-  perform pg_temp.uji('06 C setujui -> modal ketiganya 100.000 (porsi 33,33%)', C,
+  perform pg_temp.uji('06 C setujui -> modal ketiganya 100.000 (porsi sama besar)', C,
     format($q$update ganti_modal set status = 'aktif' where id = %L$q$, g2), false,
     format($c$pg_temp.modal(%L) = 100000 and pg_temp.modal(%L) = 100000 and pg_temp.modal(%L) = 100000
-              and (select persen from v_porsi_kepemilikan where owner_id = %L) = 33.33$c$, A, B, C, A));
+              and (select count(distinct persen) from v_porsi_kepemilikan where owner_id in (%L, %L, %L)) = 1$c$, A, B, C, A, B, C));
 
   -- 3. Batasan
   perform pg_temp.uji('07 total ganti melebihi belanja -> ditolak', A, format(ganti, g3, B, A, 150000, t1), true);
@@ -149,7 +151,7 @@ begin
   perform pg_temp.uji('23 unggah foto bukti ke folder ganti/', A,
     $q$insert into storage.objects (bucket_id, name, owner_id) values ('bukti', 'ganti/2026-10/72000000-0000-4000-8000-0000000000ff.webp', auth.uid()::text)$q$, false);
   perform pg_temp.uji('22 hapus ganti -> ditolak', A, 'delete from ganti_modal', true,
-    $c$(select count(*) from ganti_modal) = 4$c$);
+    format($c$(select count(*) from ganti_modal where pengganti_id in (%L, %L, %L)) = 4$c$, A, B, C));
 end $$;
 
 do $$
@@ -157,7 +159,7 @@ declare
   v_total int; v_gagal int; v_teks text;
 begin
   select count(*), count(*) filter (where not lulus),
-         string_agg(case when lulus then 'LULUS ' else 'GAGAL ' end || uji || ' — ' || catatan, E'\n' order by no)
+         string_agg(case when lulus then 'LULUS ' else 'GAGAL ' end || uji || ' — ' || catatan, E'\n' order by lulus, no) -- yang GAGAL di atas: SQL Editor hanya menampilkan baris awal
     into v_total, v_gagal, v_teks
   from hasil;
   if v_gagal = 0 then
