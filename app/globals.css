@@ -558,3 +558,6 @@ input[type="email"] {
 .piutang-aksi input { width: 100%; margin-top: 8px; }
 .piutang-aksi .err:empty { display: none; }
 .card-tagihan .ref, .card-piutang .ref { margin-top: 4px; }
+
+/* Deploy Preview = database uji */
+.pita-uji { padding: 6px 16px; background: #F2B53A; color: #1a1200; font-family: var(--f-mono); font-size: .72rem; font-weight: 700; text-align: center; letter-spacing: .02em; }
