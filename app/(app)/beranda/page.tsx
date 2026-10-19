@@ -1,8 +1,10 @@
 import { Mega } from "@/components/judul";
 import { ambilBiayaPraOperasi, ambilPorsi, ambilSaldoKas, hitungBelumAdaBukti, hitungMenungguSaya } from "@/lib/data";
+import { AksiPiutang, AksiTagihan } from "@/components/patungan-aksi";
 import { TanggalHariIni } from "@/components/tanggal-hari-ini";
 import { TombolNotifikasi } from "@/components/tombol-notifikasi";
-import { rupiah } from "@/lib/format";
+import { rupiah, tanggal } from "@/lib/format";
+import { ambilBelanjaPribadiSaya, ambilPatunganBeranda, type Patungan } from "@/lib/patungan";
 import { ambilSesi } from "@/lib/sesi";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -87,6 +89,95 @@ async function Ringkasan() {
   );
 }
 
+function StatusTagihan({ p }: { p: Patungan }) {
+  if (p.status === "lunas") return <span className="status st-approved">lunas</span>;
+  if (p.status === "ditolak") return <span className="status st-rejected">tidak ikut</span>;
+  return <span className="status st-pending">{p.diproses > 0 ? "menunggu konfirmasi" : "belum lunas"}</span>;
+}
+
+/** Patungan (migrasi 008): tagihan yang harus saya bayar + patungan yang saya minta dan belum lunas. */
+async function Patungan() {
+  const { userId } = await ambilSesi();
+  const { tagihan, piutang } = await ambilPatunganBeranda(userId);
+  if (!tagihan.length && !piutang.length) return null;
+  const pilihanTanggung = tagihan.length ? await ambilBelanjaPribadiSaya(userId) : [];
+
+  return (
+    <section className="fs" id="patungan">
+      <div className="fs-head">
+        <span className="slug">patungan/</span>
+        <span className="hint">porsi bergeser setelah uangnya diterima</span>
+      </div>
+      <div className="cards">
+        {tagihan.map((t) => (
+          <article key={t.id} className="card card-tagihan">
+            <div className="card-h">
+              <div className="card-t">
+                Kamu belum ganti ke {t.penagih}
+                <small>
+                  {t.belanja.judul} · {rupiah(t.belanja.nilai)} · {tanggal(t.belanja.tanggal)}
+                </small>
+              </div>
+              <div className="card-kanan">
+                <span className="card-rp">{rupiah(t.sisa + t.diproses)}</span>
+                <StatusTagihan p={t} />
+              </div>
+            </div>
+            <p className="ref">
+              diminta {rupiah(t.jumlah)}
+              {t.dibayar > 0 ? ` · sudah dibayar ${rupiah(t.dibayar)}` : ""}
+              {t.diproses > 0 ? ` · ${rupiah(t.diproses)} menunggu konfirmasi ${t.penagih}` : ""}
+            </p>
+            <AksiTagihan
+              tagihan={t}
+              userId={userId}
+              belanjaAktif={t.belanja.status === "aktif"}
+              pilihanTanggung={pilihanTanggung.filter((x) => x.kunci !== t.kunci)}
+            />
+          </article>
+        ))}
+        {piutang.map(({ belanja, patungan }) => (
+          <article key={belanja.kunci} className="card card-piutang">
+            <div className="card-h">
+              <div className="card-t">
+                Patunganmu belum lunas
+                <small>
+                  {belanja.judul} · {tanggal(belanja.tanggal)}
+                  {belanja.status === "menunggu" ? " · belanja masih menunggu persetujuan" : ""}
+                </small>
+              </div>
+              <div className="card-kanan">
+                <span className="card-rp">{rupiah(belanja.nilai)}</span>
+              </div>
+            </div>
+            <ul className="piutang-list">
+              {patungan.map((p) => (
+                <li key={p.id}>
+                  <div className="piutang-baris">
+                    <span>
+                      <b>{p.tertagih}</b> {rupiah(p.jumlah)}
+                      {p.status === "terbuka" && p.dibayar + p.diproses > 0 ? ` · sisa ${rupiah(p.sisa + p.diproses)}` : ""}
+                    </span>
+                    <StatusTagihan p={p} />
+                  </div>
+                  {p.status === "ditolak" && (
+                    <p className="ref">
+                      “{p.alasan}”{p.tanggung ? ` · menanggung ${p.tanggung}` : ""}
+                    </p>
+                  )}
+                  {p.status === "terbuka" && belanja.status === "aktif" && p.sisa > 0 && (
+                    <AksiPiutang id={p.id} tertagih={p.tertagih} bisaBatal={p.diproses === 0} />
+                  )}
+                </li>
+              ))}
+            </ul>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function Memuat() {
   return (
     <div className="loading-row">
@@ -124,6 +215,9 @@ export default function Page() {
       </div>
       <Suspense fallback={<Memuat />}>
         <Ringkasan />
+      </Suspense>
+      <Suspense fallback={<Memuat />}>
+        <Patungan />
       </Suspense>
       <Suspense fallback={<Memuat />}>
         <KartuPorsi />

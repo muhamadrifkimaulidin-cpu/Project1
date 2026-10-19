@@ -2,6 +2,7 @@
 
 import { InputUang } from "@/components/input-uang";
 import { PilihFoto } from "@/components/pilih-foto";
+import { PilihPatungan, simpanPatungan, totalPatungan, type IsianPatungan, type Owner } from "@/components/pilih-patungan";
 import { useOnline } from "@/components/status-sinyal";
 import { unggahBukti } from "@/lib/foto";
 import { hariIniLokal, rupiah, tanggal as fmtTanggal } from "@/lib/format";
@@ -25,18 +26,29 @@ const ASAL: { v: Sumber; label: string; ket: string }[] = [
   { v: "setor_barang", label: "Barang saya", ket: "Barang pribadi saya diserahkan ke usaha: nilainya disepakati penyetuju, lalu jadi modal saya." },
 ];
 
-type Hasil = { nama: string; nilai: number; sumber: Sumber; status: Status; denganTransaksi: boolean; tanpaBukti: boolean };
+type Hasil = {
+  nama: string;
+  nilai: number;
+  sumber: Sumber;
+  status: Status;
+  denganTransaksi: boolean;
+  tanpaBukti: boolean;
+  patungan: string | null;
+  errorPatungan: string | null;
+};
 
 export function FormAset({
   outletId,
   userId,
   penyetuju,
   kategoriAsetId,
+  ownerLain,
 }: {
   outletId: string;
   userId: string;
   penyetuju: string[];
   kategoriAsetId: string | null; // kategori pengeluaran "Pembelian aset"
+  ownerLain: Owner[]; // untuk minta patungan (aset dibeli uang saya)
 }) {
   const router = useRouter();
   const online = useOnline();
@@ -52,12 +64,15 @@ export function FormAset({
   const [metode, setMetode] = useState<Metode>("tunai");
   const [fotoBarang, setFotoBarang] = useState<File | null>(null);
   const [fotoNota, setFotoNota] = useState<File | null>(null);
+  const [mintaPatungan, setMintaPatungan] = useState(false);
+  const [isiPatungan, setIsiPatungan] = useState<IsianPatungan>({});
 
   const [proses, setProses] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasil, setHasil] = useState<Hasil | null>(null);
   // id stabil per isian: simpan ulang setelah sinyal putus tidak membuat aset/transaksi ganda
   const ids = useRef<{ aset: string; transaksi: string; fotoBarang: string } | null>(null);
+  const idPatungan = useRef<Record<string, string> | null>(null);
 
   useEffect(() => {
     const t = hariIniLokal();
@@ -76,9 +91,12 @@ export function FormAset({
     setLokasi("");
     setFotoBarang(null);
     setFotoNota(null);
+    setMintaPatungan(false);
+    setIsiPatungan({});
     setHasil(null);
     setError(null);
     ids.current = null;
+    idPatungan.current = null;
     window.scrollTo({ top: 0 });
   };
 
@@ -91,6 +109,9 @@ export function FormAset({
     if (!tgl) return setError("Isi tanggal.");
     if (tgl > hariIni) return setError("Tanggal tidak boleh di masa depan.");
     if (!nilai || nilai <= 0) return setError(setor ? "Isi nilai usulan lebih dari Rp0." : "Isi harga lebih dari Rp0.");
+    const denganPatungan = sumber === "beli_owner" && mintaPatungan && totalPatungan(isiPatungan) > 0;
+    if (denganPatungan && totalPatungan(isiPatungan) > nilai)
+      return setError(`Patungan yang diminta (${rupiah(totalPatungan(isiPatungan))}) melebihi harga aset.`);
     const umurBulan = Number(umur);
     if (!Number.isInteger(umurBulan) || umurBulan <= 0) return setError("Umur pakai harus bilangan bulat lebih dari 0 bulan.");
     // Bukti: nota untuk barang yang dibeli; untuk barang setoran, foto barangnya
@@ -157,7 +178,32 @@ export function FormAset({
         throw new Error(err.message);
       }
 
-      setHasil({ nama: nama.trim(), nilai, sumber, status: status!, denganTransaksi, tanpaBukti: !adaBukti });
+      let ringkasPatungan: string | null = null;
+      let errorPatungan: string | null = null;
+      if (denganPatungan) {
+        idPatungan.current ??= Object.fromEntries(ownerLain.map((o) => [o.id, crypto.randomUUID()]));
+        setProses("Meminta patungan…");
+        try {
+          await simpanPatungan(supabase, { aset_id: id.aset }, userId, isiPatungan, idPatungan.current);
+          ringkasPatungan = ownerLain
+            .filter((o) => (isiPatungan[o.id] ?? 0) > 0)
+            .map((o) => `${o.nama} ${rupiah(isiPatungan[o.id])}`)
+            .join(", ");
+        } catch (x) {
+          errorPatungan = x instanceof Error ? x.message : "gagal";
+        }
+      }
+
+      setHasil({
+        nama: nama.trim(),
+        nilai,
+        sumber,
+        status: status!,
+        denganTransaksi,
+        tanpaBukti: !adaBukti,
+        patungan: ringkasPatungan,
+        errorPatungan,
+      });
       router.refresh();
       window.scrollTo({ top: 0 });
     } catch (x) {
@@ -193,7 +239,22 @@ export function FormAset({
                 Belum ada foto bukti: masuk daftar &quot;belum ada bukti&quot;.
               </>
             )}
+            {hasil.patungan && (
+              <>
+                <br />
+                Patungan diminta: {hasil.patungan}. Mereka bisa membayar setelah aset ini disetujui.
+              </>
+            )}
           </div>
+          {hasil.errorPatungan && (
+            <div className="notice bad">
+              Aset tersimpan, tapi permintaan patungan gagal: {hasil.errorPatungan}. Minta ulang dari kartu aset di{" "}
+              <Link href="/riwayat?jenis=aset" className="link-line">
+                riwayat/
+              </Link>
+              .
+            </div>
+          )}
           <div className="aksi-hasil">
             <button type="button" className="btn-go" onClick={reset}>
               <span>Catat lagi</span>
@@ -305,6 +366,28 @@ export function FormAset({
               </>
             ) : (
               <div className="notice warn">Kategori &quot;Pembelian aset&quot; tidak ditemukan — catat pengeluarannya lewat Catat → Pengeluaran.</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {sumber === "beli_owner" && ownerLain.length > 0 && (
+        <section className="fs">
+          <div className="fs-head">
+            <span className="slug">patungan/</span>
+            <span className="hint">opsional</span>
+          </div>
+          <div className="fs-body form-1">
+            <label className="tile">
+              <input type="checkbox" checked={mintaPatungan} onChange={(e) => setMintaPatungan(e.target.checked)} />
+              <span className="tile-box" />
+              <span>Minta patungan ke owner lain</span>
+            </label>
+            {mintaPatungan && (
+              <>
+                <PilihPatungan idAwal="patungan" owner={ownerLain} total={nilai} batas={null} isi={isiPatungan} onChange={setIsiPatungan} />
+                <p className="ref">Porsi baru bergeser setelah mereka benar-benar mengganti dan kamu menyetujuinya.</p>
+              </>
             )}
           </div>
         </section>

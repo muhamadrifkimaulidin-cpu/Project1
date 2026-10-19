@@ -1,11 +1,12 @@
 import { Mega } from "@/components/judul";
 import { FormGanti } from "@/components/form-ganti";
+import { FormPatungan } from "@/components/patungan-aksi";
 import { AksiRiwayat } from "@/components/riwayat-aksi";
 import { PilihFilter } from "@/components/riwayat-filter";
 import { ambilKategori } from "@/lib/data";
 import { rupiah, tanggal } from "@/lib/format";
 import { ambilOwner } from "@/lib/rnd";
-import { ambilCatatan, BATAS_PER_JENIS, bacaFilter, type Filter, type ItemRiwayat } from "@/lib/riwayat";
+import { ambilCatatan, BATAS_PER_JENIS, bacaFilter, type Filter, type InfoGanti, type ItemRiwayat } from "@/lib/riwayat";
 import { ambilSesi } from "@/lib/sesi";
 import Link from "next/link";
 import { Fragment, Suspense } from "react";
@@ -25,6 +26,37 @@ function tautan(f: Filter, ubah: Partial<Filter>) {
 
 function sebagaiQuery(f: Filter): Record<string, string> {
   return Object.fromEntries(Object.entries(f).filter(([, v]) => v)) as Record<string, string>;
+}
+
+/** Tombol di blok pembagian-bayar: minta patungan / catat ganti; yang punya tagihan diarahkan ke beranda. */
+function AksiGanti({ item, info, userId, owner }: { item: ItemRiwayat; info: InfoGanti; userId: string; owner: { id: string; nama: string }[] }) {
+  const tabel = item.tabel as "transaksi" | "aset";
+  const tagihanSaya = info.patungan.find((p) => p.status === "terbuka" && p.tertagihId === userId);
+  if (tagihanSaya) {
+    return (
+      <p className="ref warn">
+        Tagihanmu {rupiah(tagihanSaya.sisa + tagihanSaya.diproses)} —{" "}
+        <Link href="/beranda#patungan" className="link-line">
+          bayar / tidak ikut di beranda/
+        </Link>
+      </p>
+    );
+  }
+  const sudahDiminta = new Set(info.patungan.filter((p) => p.status !== "ditolak").map((p) => p.tertagihId));
+  return (
+    <>
+      {info.pembayarId === userId && (
+        <FormPatungan
+          kunci={`${tabel}:${item.id}`}
+          userId={userId}
+          total={info.total}
+          batas={info.bebas}
+          owner={owner.filter((o) => o.id !== userId && !sudahDiminta.has(o.id))}
+        />
+      )}
+      <FormGanti tabel={tabel} belanjaId={item.id} info={info} userId={userId} owner={owner} />
+    </>
+  );
 }
 
 function Kartu({ item, userId, owner }: { item: ItemRiwayat; userId: string; owner: { id: string; nama: string }[] }) {
@@ -96,12 +128,31 @@ function Kartu({ item, userId, owner }: { item: ItemRiwayat; userId: string; own
                 {d.status === "menunggu" && <span className="status st-pending">menunggu</span>}
               </li>
             ))}
+            {item.ganti.patungan
+              .filter((p) => p.status !== "lunas")
+              .map((p) => (
+                <li key={p.id}>
+                  {p.tertagih} diminta patungan {rupiah(p.jumlah)}
+                  {p.status === "ditolak" ? (
+                    <>
+                      {" "}
+                      <span className="status st-rejected">tidak ikut</span> “{p.alasan}”
+                      {p.tanggung ? ` · menanggung ${p.tanggung}` : ""}
+                    </>
+                  ) : (
+                    <>
+                      {p.dibayar > 0 ? ` · sisa ${rupiah(p.sisa + p.diproses)}` : ""}
+                      <span className="status st-pending">belum lunas</span>
+                    </>
+                  )}
+                </li>
+              ))}
             <li>
               masih ditanggung {item.ganti.pembayar}: <b>{rupiah(item.ganti.sisa)}</b>
             </li>
           </ul>
           {!item.pengajuan && item.tabel !== "ganti_modal" && (
-            <FormGanti tabel={item.tabel as "transaksi" | "aset"} belanjaId={item.id} info={item.ganti} userId={userId} owner={owner} />
+            <AksiGanti item={item} info={item.ganti} userId={userId} owner={owner} />
           )}
         </div>
       )}

@@ -546,3 +546,15 @@ input[type="email"] {
 .ganti-form { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
 .ganti-form .chips { margin-top: 6px; }
 .card .ganti-pesan { margin: 12px 0 0; }
+
+/* Patungan (migrasi 008) */
+.patungan-pilih { display: flex; flex-direction: column; gap: 10px; }
+.patungan-pilih .fld { margin: 0; }
+.piutang-list { display: flex; flex-direction: column; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.piutang-list > li { padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.piutang-list > li:first-child { padding-top: 0; border-top: 0; }
+.piutang-baris { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .9rem; }
+.piutang-aksi .card-actions { margin-top: 8px; }
+.piutang-aksi input { width: 100%; margin-top: 8px; }
+.piutang-aksi .err:empty { display: none; }
+.card-tagihan .ref, .card-piutang .ref { margin-top: 4px; }

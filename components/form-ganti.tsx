@@ -47,7 +47,12 @@ export function FormGanti({
   // id stabil: simpan ulang setelah sinyal putus tidak menggandakan
   const idGanti = useRef<string | null>(null);
 
-  if (info.sisa <= 0) return null;
+  // Pengganti yang punya tagihan patungan terbuka: gantinya tertaut ke tagihan itu (migrasi 008),
+  // batasnya sisa tagihan. Selain itu batasnya bagian yang belum diganti maupun diminta.
+  const tagihanTerbuka = (id: string) => info.patungan.find((p) => p.status === "terbuka" && p.tertagihId === id);
+  const batas = (id: string) => tagihanTerbuka(id)?.sisa ?? info.bebas;
+  if (info.bebas <= 0 && !info.patungan.some((p) => p.status === "terbuka" && p.sisa > 0)) return null;
+  const maks = pengganti ? batas(pengganti) : info.bebas;
   const rata = Math.round(info.total / Math.max(owner.length, 1));
   const lawan = sayaPembayar ? owner.find((o) => o.id === pengganti)?.nama ?? "owner itu" : info.pembayar;
 
@@ -56,7 +61,10 @@ export function FormGanti({
     if (!online) return setError("Tidak ada sinyal. Tidak ada yang disimpan — coba lagi setelah tersambung.");
     if (!pengganti) return setError("Pilih siapa yang mengganti.");
     if (!jumlah || jumlah <= 0) return setError("Isi jumlah lebih dari Rp0.");
-    if (jumlah > info.sisa) return setError(`Maksimal ${rupiah(info.sisa)} (sisa yang belum diganti).`);
+    if (jumlah > maks)
+      return setError(
+        `Maksimal ${rupiah(maks)} (${tagihanTerbuka(pengganti) ? "sisa tagihan patungan" : "sisa yang belum diganti/diminta"}).`,
+      );
     const tgl = hariIniLokal();
     const supabase = createClient();
     idGanti.current ??= crypto.randomUUID();
@@ -122,14 +130,16 @@ export function FormGanti({
         <label htmlFor={`jumlah-ganti-${belanjaId}`}>Jumlah diganti</label>
         <InputUang id={`jumlah-ganti-${belanjaId}`} nilai={jumlah} onChange={setJumlah} />
         <div className="chips">
-          {rata <= info.sisa && (
+          {rata <= maks && (
             <button type="button" className="chip" onClick={() => setJumlah(rata)}>
               bagi rata {rupiah(rata)}
             </button>
           )}
-          <button type="button" className="chip" onClick={() => setJumlah(info.sisa)}>
-            sisa {rupiah(info.sisa)}
-          </button>
+          {maks > 0 && (
+            <button type="button" className="chip" onClick={() => setJumlah(maks)}>
+              {tagihanTerbuka(pengganti) ? "sisa tagihan" : "sisa"} {rupiah(maks)}
+            </button>
+          )}
         </div>
       </div>
       <div className="fld">
