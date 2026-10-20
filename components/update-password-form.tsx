@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -16,7 +17,12 @@ export function UpdatePasswordForm() {
     setError(null);
     const { error } = await createClient().auth.updateUser({ password });
     if (error) {
-      setError(error.message);
+      // tanpa sesi = link reset tidak terbuka dengan benar (kedaluwarsa / browser lain / dibuka langsung)
+      setError(
+        /session/i.test(error.message)
+          ? "Sesi reset tidak ditemukan. Minta tautan baru, lalu buka tautan di email itu di browser yang sama."
+          : error.message,
+      );
       setIsLoading(false);
       return;
     }
@@ -39,6 +45,11 @@ export function UpdatePasswordForm() {
         <span className="arr">↗</span>
       </button>
       <p className="err" role="alert">{error}</p>
+      {error && (
+        <Link href="/auth/forgot-password" className="link-line">
+          minta-tautan-baru/
+        </Link>
+      )}
     </form>
   );
 }

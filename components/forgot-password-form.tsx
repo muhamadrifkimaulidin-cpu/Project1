@@ -16,7 +16,8 @@ export function ForgotPasswordForm() {
     setError(null);
     // URL ini harus terdaftar di Supabase: Authentication → URL Configuration → Redirect URLs
     const { error } = await createClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/update-password`,
+      // lewat /auth/confirm supaya sesi dari link email dibuat dulu sebelum halaman ganti password
+      redirectTo: `${window.location.origin}/auth/confirm?next=/auth/update-password`,
     });
     if (error) setError(error.message);
     else setSuccess(true);
