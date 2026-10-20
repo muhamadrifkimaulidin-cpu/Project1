@@ -160,6 +160,9 @@ tabel dan view laporan, `sha256sum` → `SHA256SUMS.txt`, unggah dengan rclone k
 - Selesai tiap fitur: jalankan `npm run build` dan `npm run lint`, buat PR, lalu tulis di PR cara mengujinya
   manual di URL Vercel Preview (login sebagai owner A, catat X, login sebagai B, setujui, cek porsi).
 - Satu PR = satu fitur dari daftar Tahap 1, supaya mudah diuji dan di-review dari HP.
+- **Panduan owner** ada di `docs/panduan-owner.md`. Setiap fitur yang mengubah cara pakai ikut memperbarui
+  file ini di PR yang sama; workflow `panduan.yml` menjadikannya .docx di Drive `Audit 3Rally/panduan/`.
+  Jangan cantumkan hal pengembang (database uji, URL Preview, aplikasi "3Rally UJI") di panduan.
 - Komunikasi campur Bahasa Indonesia dan istilah teknis English. Ringkas.
 
 ## 9. Definisi selesai Tahap 1
