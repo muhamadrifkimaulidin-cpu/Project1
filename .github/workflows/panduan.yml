@@ -1,0 +1,57 @@
+# Panduan owner (docs/panduan-owner.md) -> .docx -> Google Drive "Audit 3Rally/panduan/"
+# Jalan otomatis setiap file panduan berubah di main, atau manual lewat Actions -> Run workflow.
+# Memakai secret yang sama dengan backup: RCLONE_GDRIVE_TOKEN.
+#   Panduan Owner 3Rally.docx               versi terbaru (ditimpa; link yang dibagikan tetap)
+#   arsip/Panduan Owner 3Rally <tgl> <sha>.docx  salinan per perubahan (tidak pernah ditimpa)
+name: Panduan owner ke Drive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - docs/panduan-owner.md
+      - .github/workflows/panduan.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: panduan
+  cancel-in-progress: false
+
+jobs:
+  panduan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      RCLONE_CONFIG_GDRIVE_TYPE: drive
+      RCLONE_CONFIG_GDRIVE_SCOPE: drive
+      RCLONE_CONFIG_GDRIVE_TOKEN: ${{ secrets.RCLONE_GDRIVE_TOKEN }}
+      TUJUAN: "gdrive:Audit 3Rally/panduan"
+      NAMA: Panduan Owner 3Rally
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pasang pandoc dan rclone
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends pandoc rclone > /dev/null
+          pandoc --version | head -1
+          rclone version | head -1
+
+      - name: Cek secret
+        run: '[ -n "$RCLONE_CONFIG_GDRIVE_TOKEN" ] || { echo "::error::Secret RCLONE_GDRIVE_TOKEN belum diisi"; exit 1; }'
+
+      - name: Buat .docx
+        run: |
+          TGL=$(TZ=Asia/Jakarta date +%Y-%m-%d)
+          echo "TGL=$TGL" >> "$GITHUB_ENV"
+          pandoc docs/panduan-owner.md -f markdown -o "$NAMA.docx" --metadata date="Diperbarui $TGL"
+          ls -l "$NAMA.docx"
+
+      - name: Unggah ke Drive
+        run: |
+          rclone copyto "$NAMA.docx" "$TUJUAN/$NAMA.docx"
+          rclone copyto "$NAMA.docx" "$TUJUAN/arsip/$NAMA $TGL ${GITHUB_SHA::7}.docx" --immutable
+          rclone lsl "$TUJUAN" --max-depth 2
